@@ -1,0 +1,61 @@
+# Extensiones para vscode
+	Abrir los settings:
+		file -> preferece -> settings
+			Cambiar de color:
+				workbench: color theme
+	linters:
+		pip install autopep8 pylint pylint-django
+	Boomarks:
+		Bookmark toogle label desde la paleta de comandos
+	Todo Tree:
+		# TODO
+		# FIXME
+	python docstrings
+		En las paleta de comandos buscar pydocstring
+	python preview
+		click derecho -> preview to design
+	GitLens
+
+	Bracket Pair Colorizer 2
+		Para colorear los parentesis
+	Djaneiro: para atajos
+		Model
+		mchar 	models.CharField()
+	Instalar isort para ordenar las dependencias:
+		pip install isort
+		isort archivo
+		
+	Soluciones:
+		Para poder correr los test desde vcode:
+			Especificar en la configuracion de los test que la libreria de test es pytest
+		pylance could not resolver django.db
+			paleta de comandos:
+				python select interprete
+					agregar nuestra carpeta de venv/Script/python
+
+# Inicializar y activar el entorno virtual:
+	virtualenv -p Python3.8 .venv
+	source .venv/Scripts/activate
+
+# Instalar cookiecutter:
+	pip install cookiecutter
+	cookiecutter https://github.com/pydanny/cookiecutter-django.git
+
+# Instalamos los requisitos
+	pip install -r requirements/local.txt 
+
+# Creamos el archivo de variables de entorno .env
+	Agregamos:
+		DATABASE_URL=postgres://postgres:postgres123@127.0.0.1:5432/menudb
+
+# Corremos el servidor
+	python .\manage.py runserver
+
+	python ./manage.py runserver --settings=config.settings.production
+
+# Instalamos los paquetes para las pruebas
+	pip install pytest, pip install pytest, django-mock-queries
+
+# Instalamos ipython para el shell_pluss
+	pip install ipython
+
