@@ -26,15 +26,26 @@ class TestModuloOperations(TestCase):
         self.assertEqual(module1.name, 'Module 1')
         self.assertTrue(Module.objects.count() == 1)
 
-    def test_create_module_empty(self):
         with self.assertRaisesMessage(ValidationError, "This field cannot be blank."):
-            Module.objects.execute_create(name="     ")
+            module = Module.objects.execute_create(name="     ")
+        #self.assertEqual(modul.name, "dd")
 
     def test_module_name_must_be_unique(self):
         Module.objects.create(name="Module 1")
 
         with self.assertRaisesMessage(ValidationError, 'The module already exists'):
             Module.objects.execute_create(name="Module 1")
+
+    def test_update_module_name(self):
+        module1 = Module.objects.create(name="Module 2")
+
+        with patch.object(Module, 'clean_and_validate') as mock_validate:
+            module_update = Module.objects.execute_update(
+                module1.id, "Module 1")
+
+            mock_validate.assert_called()
+            self.assertEqual(module_update.id, module1.id)
+            self.assertEqual(module_update.name, "Module 1")
 
         # class TestMenuOperations(TestCase):
 

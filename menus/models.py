@@ -14,9 +14,16 @@ from django.db import models
 class ModuleManager(models.Manager):
 
     def execute_create(self, name):
-        module = self.model(name=name.strip())
-        module.full_clean()
+        module = self.model(name=name)
+        module.clean_and_validate()
         module.save()
+        return module
+
+    def execute_update(self, pk, name):
+        module = self.get(pk=pk)
+        module.name = name
+        module.clean_and_validate()
+        module.save(update_fields=['name'])
         return module
 
 
@@ -24,13 +31,17 @@ errors = {'unique': 'The module already exists'}
 
 
 class Module(models.Model):
-    name = models.CharField(max_length=15, error_messages=errors)
+    name = models.CharField(max_length=15, error_messages=errors, blank=False)
 
     objects = ModuleManager()
 
     class Meta:
         constraints = [models.UniqueConstraint(
             fields=['name'], name='unique_module', )]
+
+    def clean_and_validate(self):
+        self.name = self.name.strip()
+        self.full_clean()
 
     # class MenuManager(models.Manager):
 

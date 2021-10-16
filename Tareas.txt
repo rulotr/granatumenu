@@ -2,7 +2,7 @@ Crear modulos
 *El nombre no puede tener espacios en blanco
 *El nombre no puede ser vacio
 *Los modulos tienen nombre unicos
-Se puede cambiar el nombre del modulo
+*Se puede cambiar el nombre del modulo
 
 Crear menus
 Los nodos del menu pertenecen a un modulo
