@@ -11,6 +11,15 @@ from django.db import models
 # Create your models here.
 
 
+class TrimCharField(models.CharField):
+    description = 'CharField using trim'
+
+    # to_python es llamado en la funcion de validacion clean
+    def to_python(self, value):
+        value = super().to_python(value)
+        return value.strip()
+
+
 class ModuleManager(models.Manager):
 
     def execute_create(self, name):
@@ -31,7 +40,8 @@ errors = {'unique': 'The module already exists'}
 
 
 class Module(models.Model):
-    name = models.CharField(max_length=15, error_messages=errors, blank=False)
+    name = TrimCharField(
+        max_length=15, error_messages=errors, blank=False)
 
     objects = ModuleManager()
 
@@ -40,7 +50,7 @@ class Module(models.Model):
             fields=['name'], name='unique_module', )]
 
     def clean_and_validate(self):
-        self.name = self.name.strip()
+        # self.name = self.name.strip()
         self.full_clean()
 
     # class MenuManager(models.Manager):

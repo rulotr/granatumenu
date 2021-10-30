@@ -21,14 +21,13 @@ from menus.models import Module
 class TestModuloOperations(TestCase):
 
     def test_create_module_with_spaces(self):
-        module1 = Module.objects.execute_create(name="  Module 1  ")
+        module1 = Module.objects.execute_create(name='   Module 1   ')
 
         self.assertEqual(module1.name, 'Module 1')
         self.assertTrue(Module.objects.count() == 1)
 
         with self.assertRaisesMessage(ValidationError, "This field cannot be blank."):
-            module = Module.objects.execute_create(name="     ")
-        #self.assertEqual(modul.name, "dd")
+            Module.objects.execute_create(name="     ")
 
     def test_module_name_must_be_unique(self):
         Module.objects.create(name="Module 1")
