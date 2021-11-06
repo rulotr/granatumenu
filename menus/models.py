@@ -12,6 +12,8 @@ from django.db import models
 
 
 class TrimCharField(models.CharField):
+    # Una vez que se establece el tipo del que hereda no se podra cambiar
+
     description = 'CharField using trim'
 
     # to_python es llamado en la funcion de validacion clean
@@ -24,16 +26,24 @@ class ModuleManager(models.Manager):
 
     def execute_create(self, name):
         module = self.model(name=name)
-        module.clean_and_validate()
+        module.full_clean()
         module.save()
         return module
 
     def execute_update(self, pk, name):
         module = self.get(pk=pk)
         module.name = name
-        module.clean_and_validate()
+        module.full_clean()
         module.save(update_fields=['name'])
         return module
+
+    def execute_delete(self, pk):
+        try:
+            module = self.get(pk=pk)
+        except self.model.DoesNotExist as e:
+            raise self.model.DoesNotExist(f"El modulo pk={pk} no existe") from e
+
+        module.delete()
 
 
 errors = {'unique': 'The module already exists'}
@@ -48,10 +58,6 @@ class Module(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(
             fields=['name'], name='unique_module', )]
-
-    def clean_and_validate(self):
-        # self.name = self.name.strip()
-        self.full_clean()
 
     # class MenuManager(models.Manager):
 

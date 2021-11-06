@@ -3,6 +3,7 @@ Crear modulos
 *El nombre no puede ser vacio
 *Los modulos tienen nombre unicos
 *Se puede cambiar el nombre del modulo
+*Se puede eliminar un modulo dando su pk
 
 Crear menus
 Los nodos del menu pertenecen a un modulo
