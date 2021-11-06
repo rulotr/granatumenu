@@ -4,6 +4,7 @@ Crear modulos
 *Los modulos tienen nombre unicos
 *Se puede cambiar el nombre del modulo
 *Se puede eliminar un modulo dando su pk
+Que pasa si se quiere modificar un modulo que no existe
 
 Crear menus
 Los nodos del menu pertenecen a un modulo

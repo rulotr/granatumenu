@@ -59,3 +59,4 @@
 # Instalamos ipython para el shell_pluss
 	pip install ipython
 
+# Ejecutar un clase de pruebas en especifico

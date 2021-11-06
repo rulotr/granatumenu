@@ -58,7 +58,7 @@ class TestModuleOperations(TestCase):
         self.assertTrue(Module.objects.count() == 0)
 
     def test_delete_module_not_exist(self):
-        with self.assertRaisesMessage(Module.DoesNotExist, "El modulo pk=1 no existe"):
+        with self.assertRaisesMessage(Module.DoesNotExist, "The module with the pk = 1 doesnt exist"):
             Module.objects.execute_delete(pk=1)
 
 
@@ -71,7 +71,7 @@ class TestModuleQueries(TestCase):
         self.assertEqual(module1, new_module)
 
     def test_find_by_pk_doesnotexist(self):
-        with self.assertRaisesMessage(Module.DoesNotExist, "El modulo pk=1 no existe"):
+        with self.assertRaisesMessage(Module.DoesNotExist, "The module with the pk = 1 doesnt exist"):
             Module.objects.find_by_pk(pk=1)
 
         # class TestMenuOperations(TestCase):

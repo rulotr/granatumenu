@@ -30,7 +30,8 @@ class ModuleQuerySet(models.query.QuerySet):
         try:
             return self.get(pk=pk)
         except self.model.DoesNotExist as ex:
-            raise ValidationError(ERROR_PK_NOT_EXIST.format(pk)) from ex
+            raise self.model.DoesNotExist(
+                ERROR_PK_NOT_EXIST.format(pk)) from ex
 
 
 class ModuleManager(models.Manager):
@@ -44,7 +45,7 @@ class ModuleManager(models.Manager):
         return module
 
     def execute_update(self, pk, name):
-        module = self.get(pk=pk)
+        module = self.find_by_pk(pk)
         module.name = name
         module.full_clean()
         module.save(update_fields=['name'])
