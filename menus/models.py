@@ -10,6 +10,9 @@ from django.db import models
 
 # Create your models here.
 
+errors = {'unique': 'The module already exists'}
+ERROR_PK_NOT_EXIST = "The module with the pk = {} doesnt exist"
+
 
 class TrimCharField(models.CharField):
     # Una vez que se establece el tipo del que hereda no se podra cambiar
@@ -22,7 +25,17 @@ class TrimCharField(models.CharField):
         return value.strip()
 
 
+class ModuleQuerySet(models.query.QuerySet):
+    def find_by_pk(self, pk):
+        try:
+            return self.get(pk=pk)
+        except self.model.DoesNotExist as ex:
+            raise ValidationError(ERROR_PK_NOT_EXIST.format(pk)) from ex
+
+
 class ModuleManager(models.Manager):
+    def get_queryset(self):
+        return ModuleQuerySet(self.model, using=self._db)
 
     def execute_create(self, name):
         module = self.model(name=name)
@@ -38,24 +51,12 @@ class ModuleManager(models.Manager):
         return module
 
     def execute_delete(self, pk):
-        try:
-            module = self.get(pk=pk)
-        except self.model.DoesNotExist as e:
-            raise self.model.DoesNotExist(
-                f"El modulo pk={pk} no existe") from e
-
+        module = self.find_by_pk(pk)
         module.delete()
 
     def find_by_pk(self, pk):
-        try:
-            module = self.get(pk=pk)
-            return module
-        except self.model.DoesNotExist as e:
-            raise self.model.DoesNotExist(
-                f"El modulo pk={pk} no existe") from e
-
-
-errors = {'unique': 'The module already exists'}
+        module = self.get_queryset().find_by_pk(pk)
+        return module
 
 
 class Module(models.Model):
