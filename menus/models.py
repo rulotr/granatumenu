@@ -41,9 +41,18 @@ class ModuleManager(models.Manager):
         try:
             module = self.get(pk=pk)
         except self.model.DoesNotExist as e:
-            raise self.model.DoesNotExist(f"El modulo pk={pk} no existe") from e
+            raise self.model.DoesNotExist(
+                f"El modulo pk={pk} no existe") from e
 
         module.delete()
+
+    def find_by_pk(self, pk):
+        try:
+            module = self.get(pk=pk)
+            return module
+        except self.model.DoesNotExist as e:
+            raise self.model.DoesNotExist(
+                f"El modulo pk={pk} no existe") from e
 
 
 errors = {'unique': 'The module already exists'}
