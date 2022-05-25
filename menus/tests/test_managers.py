@@ -19,6 +19,13 @@ from menus.models import Module
 
 
 class TestModuleOperations(TestCase):
+    def test_get_all_modules(self):
+        Module.objects.create(name="Module 1")
+        Module.objects.create(name="Module 2")
+
+        modules = Module.objects.get_all()
+        self.assertEqual(modules.count(), 2)
+
     def test_remove_space_fields(self):
         module1 = Module(name="    Module 1    ")
         module1.full_clean()
@@ -63,16 +70,37 @@ class TestModuleOperations(TestCase):
 
 
 class TestModuleQueries(TestCase):
+
     def test_find_by_pk(self):
         module1 = Module.objects.create(name="Module 1")
-
         new_module = Module.objects.find_by_pk(pk=module1.pk)
 
         self.assertEqual(module1, new_module)
 
-    def test_find_by_pk_doesnotexist(self):
-        with self.assertRaisesMessage(Module.DoesNotExist, "The module with the pk = 1 doesnt exist"):
-            Module.objects.find_by_pk(pk=1)
+    # # @patch('django.db.models.query.QuerySet')
+    # def test_find_by_pk2(self):
+    #     module1 = Module.objects.create(name="Module 1")
+
+    #     qs_mock = MockSet2(Module(pk=1, name="Module1",), Module(
+    #         name="Module2",), Module(name="Module3",))
+
+    #     with patch.object(Module.objects, 'get_queryset', return_value=qs_mock):
+    #         new_module = Module.objects.find_by_pk(pk=1)
+    #         self.assertEqual(qs_mock, new_module)
+
+    # def test_find_by_pk_doesnotexist(self):
+    #    with self.assertRaisesMessage(Module.DoesNotExist, "The module with the pk = 1 doesnt exist"):
+    #        Module.objects.find_by_pk(pk=1)
+
+        #     def test_module_filter(self):
+        #         expected_result =[Menu(name = "Module1",)]
+
+        #         qs_mock = MockSet(Menu(name = "Module1",),Menu(name = "Module2",),Menu(name = "Module3",))
+
+        #         with patch.object(Menu.objects, 'get_queryset', return_value=qs_mock):
+        #             resultado = Menu.objects.buscar_por_nombre("Module1")
+        #             #import ipdb;ipdb.set_trace()
+        #             self.assertEqual(resultado.count(), 1)
 
         # class TestMenuOperations(TestCase):
 

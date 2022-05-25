@@ -59,4 +59,12 @@
 # Instalamos ipython para el shell_pluss
 	pip install ipython
 
-# Ejecutar un clase de pruebas en especifico
+# Ejecutar pruebas:
+	Todas:  
+		python .\manage.py test
+	Un fichero en especifico:
+		python .\manage.py test menus.tests.test_managers
+	Un test de clase en especifico:
+		python .\manage.py test menus.tests.test_managers.TestModuleQueries
+
+

@@ -3,6 +3,7 @@
 # Core Django
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.query import QuerySet
 
 # Third app
 
@@ -14,7 +15,7 @@ errors = {'unique': 'The module already exists'}
 ERROR_PK_NOT_EXIST = "The module with the pk = {} doesnt exist"
 
 
-class TrimCharField(models.CharField):
+class CharFieldTrim(models.CharField):
     # Una vez que se establece el tipo del que hereda no se podra cambiar
 
     description = 'CharField using trim'
@@ -25,7 +26,8 @@ class TrimCharField(models.CharField):
         return value.strip()
 
 
-class ModuleQuerySet(models.query.QuerySet):
+class GenericManager(models.Manager):
+
     def find_by_pk(self, pk):
         try:
             return self.get(pk=pk)
@@ -34,9 +36,9 @@ class ModuleQuerySet(models.query.QuerySet):
                 ERROR_PK_NOT_EXIST.format(pk)) from ex
 
 
-class ModuleManager(models.Manager):
-    def get_queryset(self):
-        return ModuleQuerySet(self.model, using=self._db)
+class ModuleManager(GenericManager):
+    def get_all(self):
+        return self.model.objects.all()
 
     def execute_create(self, name):
         module = self.model(name=name)
@@ -55,13 +57,9 @@ class ModuleManager(models.Manager):
         module = self.find_by_pk(pk)
         module.delete()
 
-    def find_by_pk(self, pk):
-        module = self.get_queryset().find_by_pk(pk)
-        return module
-
 
 class Module(models.Model):
-    name = TrimCharField(
+    name = CharFieldTrim(
         max_length=15, error_messages=errors, blank=False)
 
     objects = ModuleManager()

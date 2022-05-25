@@ -6,6 +6,13 @@ Crear modulos
 *Se puede eliminar un modulo dando su pk
 Que pasa si se quiere modificar un modulo que no existe
 
+Pruebas del Api
+    Listar todos los modulos
+    Crear un nuevo modulo
+    Crear un modulo con un nombre que ya existe
+    Modificar el nombre de un modulo
+    Eliminar un modulo
+
 Crear menus
 Los nodos del menu pertenecen a un modulo
 Un nodo del menu puede tener otros nodos hijos
