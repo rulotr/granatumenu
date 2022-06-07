@@ -6,6 +6,7 @@ from socket import IP_RECVDSTADDR
 from turtle import update
 from urllib import response
 
+import mock
 from django.urls import reverse
 # from django.test import TestCase
 # from django.db import IntegrityError
@@ -54,10 +55,10 @@ class ParametroMenuAPITest(APITestCase):
         resp_module = self.client.post(self.base_url_list, new_module)
 
         self.assertEqual(resp_module.status_code, 201)
-        self.assertEqual(resp_module.data['name'], 'New Module')
+        self.assertEqual(resp_module.data['name'], 'New module')
         self.assertEqual(Module.objects.count(), 1)
 
-    def test_post_module_existent(self):
+    def test_post_module_existent_validation(self):
         Module.objects.create(name='Module 1')
         new_module = {'name': 'module 1'}
         resp_module = self.client.post(
@@ -68,6 +69,23 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(num_exist, 1)
         self.assertEqual(resp_module.data,
                          {'name': ['The module already exists']})
+
+    @mock.patch.object(Module, 'full_clean')
+    def test_post_module_existent_integrity(self, mock_method):
+        mock_method.return_value = ''
+
+        Module.objects.create(name='Module 1')
+        new_module = {'name': 'Module 1'}
+        resp_module = self.client.post(
+            self.base_url_list, new_module)
+
+        num_exist = Module.objects.count()
+        self.assertEqual(resp_module.status_code, 400)
+        self.assertEqual(num_exist, 1)
+        error_message = resp_module.data
+        self.assertEqual(error_message['name'][0].code, 'unique')
+        self.assertEqual(error_message['name']
+                         [0].title(), 'The Module Already Exists')
 
     def test_post_module_name_max_length(self):
         new_module = {'name': 'Module 890123456'}
@@ -124,3 +142,28 @@ class ParametroMenuAPITest(APITestCase):
 
         self.assertEqual(resp_delete.status_code, 204)
         self.assertEqual(Module.objects.all().count(), 0)
+
+    def test_delete_module_not_exist(self):
+        base_url = self.base_url_detail(pk=9999)
+        resp_delete = self.client.delete(base_url)
+
+        self.assertEqual(resp_delete.status_code, 404)
+        self.assertEqual(resp_delete.data, {
+                         'message': 'The module with the pk = 9999 doesnt exist'})
+
+    def test_get_module_by_id(self):
+        module1 = Module.objects.create(name='Module 1')
+
+        base_url = self.base_url_detail(pk=module1.pk)
+        resp_get = self.client.get(base_url)
+
+        self.assertEqual(resp_get.status_code, 200)
+        self.assertEqual(resp_get.data, {'id': module1.pk, 'name': 'Module 1'})
+
+    def test_get_module_by_id_not_exist(self):
+        base_url = self.base_url_detail(pk=9999)
+        resp_get = self.client.get(base_url)
+
+        self.assertEqual(resp_get.status_code, 404)
+        self.assertEqual(resp_get.data,  {
+                         'message': 'The module with the pk = 9999 doesnt exist'})

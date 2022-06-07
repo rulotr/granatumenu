@@ -3,6 +3,7 @@
 # Core Django
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.functions import Lower
 from django.db.models.query import QuerySet
 
 # Third app
@@ -60,13 +61,16 @@ class ModuleManager(GenericManager):
 
 class Module(models.Model):
     name = CharFieldTrim(
-        max_length=15, error_messages=errors, blank=False)
+        max_length=15, error_messages=errors, blank=False, unique=True)
+
+    def clean(self):
+        self.name = self.name.capitalize()
 
     objects = ModuleManager()
 
-    class Meta:
-        constraints = [models.UniqueConstraint(
-            fields=['name'], name='unique_module', )]
+    # class Meta:
+    #     constraints = [models.UniqueConstraint(
+    #         Lower('name'), name='unique_module')]
 
     # class MenuManager(models.Manager):
 

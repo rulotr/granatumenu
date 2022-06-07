@@ -67,4 +67,6 @@
 	Un test de clase en especifico:
 		python .\manage.py test menus.tests.test_managers.TestModuleQueries
 
-
+# Actualizar paquetes de requirements
+	pip install pip-upgrader
+	pip-upgrade.exe .\requirements\local.txt

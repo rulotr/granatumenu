@@ -8,8 +8,7 @@ import psycopg2
 import pytest
 from django.core import exceptions
 from django.core.exceptions import ValidationError
-from django.db import connection, transaction
-from django.db.utils import IntegrityError
+from django.db import IntegrityError, connection, transaction
 from django.test import SimpleTestCase, TestCase, skipIfDBFeature
 from django_mock_queries.mocks import ModelMocker, mocked_relations
 from django_mock_queries.query import MockModel, MockSet
@@ -40,11 +39,19 @@ class TestModuleOperations(TestCase):
         with self.assertRaisesMessage(ValidationError, "This field cannot be blank."):
             Module.objects.execute_create(name="     ")
 
-    def test_module_name_must_be_unique(self):
+    def test_module_name_must_be_unique_full_clean(self):
         Module.objects.create(name="Module 1")
 
-        with self.assertRaisesMessage(ValidationError, 'The module already exists'):
-            Module.objects.execute_create(name="Module 1")
+        with self.assertRaises(ValidationError):
+            module = Module(name="Module 1")
+            module.full_clean()
+
+    def test_module_name_must_be_unique_not_full_clean(self):
+        Module.objects.create(name="Module 1")
+
+        with self.assertRaises(IntegrityError):
+            module = Module(name="Module 1")
+            module.save()
 
     def test_update_module_name(self):
         module1 = Module.objects.create(name="Module 2")
@@ -76,6 +83,10 @@ class TestModuleQueries(TestCase):
         new_module = Module.objects.find_by_pk(pk=module1.pk)
 
         self.assertEqual(module1, new_module)
+
+    def test_find_by_pk_not_exist(self):
+        with self.assertRaisesMessage(Module.DoesNotExist, "The module with the pk = 1 doesnt exist"):
+            Module.objects.find_by_pk(pk=1)
 
     # # @patch('django.db.models.query.QuerySet')
     # def test_find_by_pk2(self):
