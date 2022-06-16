@@ -5,18 +5,19 @@ Crear modulos
 *Se puede cambiar el nombre del modulo
 *Se puede eliminar un modulo dando su pk
 *Que pasa si se quiere modificar un modulo que no existe
-Eliminar un id que no existe
+*Eliminar un id que no existe
+*Consultar modulo por id
 
 Pruebas del Api
     *Listar todos los modulos
     *Crear un nuevo modulo
     *Crear un modulo con un nombre que ya existe
     *Crear in modulo existente con minusculas
-    Consultar por el id del modulo
+    *Consultar por el id del modulo
     *Modificar el nombre de un modulo
     *Modificar el nombre de un modulo con uno ya existente
     *Eliminar un modulo
-    Eliminar un id que no existe
+    *Eliminar un id que no existe
 
 Crear menus
 Los nodos del menu pertenecen a un modulo
