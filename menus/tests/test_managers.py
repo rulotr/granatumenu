@@ -2,6 +2,7 @@
 
 # Core Django
 # Third app
+from ipaddress import ip_address
 from unittest.mock import patch
 
 import psycopg2
@@ -14,7 +15,7 @@ from django_mock_queries.mocks import ModelMocker, mocked_relations
 from django_mock_queries.query import MockModel, MockSet
 
 # My app
-from menus.models import Module
+from menus.models import Menu, Module
 
 
 class TestModuleOperations(TestCase):
@@ -87,6 +88,54 @@ class TestModuleQueries(TestCase):
     def test_find_by_pk_not_exist(self):
         with self.assertRaisesMessage(Module.DoesNotExist, "The module with the pk = 1 doesnt exist"):
             Module.objects.find_by_pk(pk=1)
+
+
+class TestMenuOperations(TestCase):
+
+    def test_create_menu(self):
+        module1 = Module.objects.create(name="Module 1")
+        menu1 = Menu.objects.execute_create(
+            name='  Menu 1  ', module=module1)
+
+        self.assertEqual(menu1.name, 'Menu 1')
+        self.assertEqual(menu1.module, module1)
+
+        self.assertTrue(Menu.objects.count() == 1)
+
+    def test_create_child_node(self):
+        module1 = Module.objects.create(name="Module 1")
+        module2 = Module.objects.create(name="Module 2")
+        menu1 = Menu.objects.create(name='Menu 1', module=module1, parent=None)
+
+        child_menu = Menu.objects.execute_create(
+            name='Child 1', module=module2, parent=menu1)
+
+        self.assertEqual(child_menu.parent, menu1)
+        self.assertEqual(child_menu.module, module1)
+
+    def test_create_menu_with_not_module(self):
+        with self.assertRaisesMessage(ValidationError, "{'module': ['This field cannot be null.']}"):
+            Menu.objects.execute_create(name='Menu 1')
+
+    def test_create_menu_same_name(self):
+        module1 = Module.objects.create(name="Module 1")
+        module2 = Module.objects.create(name="Module 2")
+        menu1 = Menu.objects.execute_create(
+            name='  Menu 1  ', module=module1)
+        menu2 = Menu.objects.execute_create(
+            name='  Menu 1  ', module=module2)
+
+        self.assertEqual(menu1.name, 'Menu 1')
+        self.assertEqual(menu2.name, 'Menu 1')
+
+        self.assertTrue(Menu.objects.count() == 2)
+
+    def test_create_two_main_menu_same_module(self):
+        module1 = Module.objects.create(name="Module 1")
+        Menu.objects.execute_create(name='Menu 1', module=module1)
+
+        with self.assertRaisesMessage(ValidationError, "Can only exist one main menu for module"):
+            Menu.objects.execute_create(name='Menu 2', module=module1)
 
     # # @patch('django.db.models.query.QuerySet')
     # def test_find_by_pk2(self):

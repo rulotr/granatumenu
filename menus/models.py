@@ -1,6 +1,9 @@
 # Standar Library
 
 # Core Django
+from ast import Mod
+from ipaddress import ip_address
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Lower
@@ -59,6 +62,20 @@ class ModuleManager(GenericManager):
         module.delete()
 
 
+class MenuManager(GenericManager):
+    def execute_create(self, name, module=None, parent=None):
+        if parent is None and self.filter(module=module, parent=None).count() > 0:
+            raise ValidationError('Can only exist one main menu for module')
+
+        if parent:
+            module = parent.module
+
+        menu = self.model(name=name, module=module, parent=parent)
+        menu.full_clean()
+        menu.save()
+        return menu
+
+
 class Module(models.Model):
     name = CharFieldTrim(
         max_length=15, error_messages=errors, blank=False, unique=True)
@@ -67,3 +84,13 @@ class Module(models.Model):
         self.name = self.name.capitalize()
 
     objects = ModuleManager()
+
+
+class Menu(models.Model):
+    name = CharFieldTrim(
+        max_length=15, error_messages=errors, blank=False)
+    module = models.ForeignKey(Module, on_delete=models.PROTECT)
+    parent = models.ForeignKey(
+        'self', null=True, default=None, blank=True, on_delete=models.PROTECT)
+
+    objects = MenuManager()
