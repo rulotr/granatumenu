@@ -3,10 +3,12 @@
 # Core Django
 from ast import Mod
 from ipaddress import ip_address
+from turtle import position
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models.functions import Lower
+from django.db.models import Max
+from django.db.models.functions import Coalesce, Lower
 from django.db.models.query import QuerySet
 
 # Third app
@@ -16,7 +18,7 @@ from django.db.models.query import QuerySet
 # Create your models here.
 
 errors = {'unique': 'The module already exists'}
-ERROR_PK_NOT_EXIST = "The module with the pk = {} doesnt exist"
+ERROR_PK_NOT_EXIST = "The {} with the pk = {} doesnt exist"
 
 
 class CharFieldTrim(models.CharField):
@@ -36,8 +38,9 @@ class GenericManager(models.Manager):
         try:
             return self.get(pk=pk)
         except self.model.DoesNotExist as ex:
+            name_model = self.model._meta.model_name
             raise self.model.DoesNotExist(
-                ERROR_PK_NOT_EXIST.format(pk)) from ex
+                ERROR_PK_NOT_EXIST.format(name_model, pk)) from ex
 
 
 class ModuleManager(GenericManager):
@@ -70,9 +73,20 @@ class MenuManager(GenericManager):
         if parent:
             module = parent.module
 
-        menu = self.model(name=name, module=module, parent=parent)
+        order = self.filter(module=module, parent=parent).aggregate(
+            num=Coalesce(Max('order'), 0))['num']
+        order += 1
+
+        menu = self.model(name=name, module=module, parent=parent, order=order)
         menu.full_clean()
         menu.save()
+        return menu
+
+    def execute_update(self, pk, name):
+        menu = self.find_by_pk(pk)
+        menu.name = name
+        menu.full_clean()
+        menu.save(update_fields=['name'])
         return menu
 
 
@@ -92,5 +106,6 @@ class Menu(models.Model):
     module = models.ForeignKey(Module, on_delete=models.PROTECT)
     parent = models.ForeignKey(
         'self', null=True, default=None, blank=True, on_delete=models.PROTECT)
+    order = models.PositiveSmallIntegerField(default=0)
 
     objects = MenuManager()

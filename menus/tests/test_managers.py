@@ -2,6 +2,7 @@
 
 # Core Django
 # Third app
+import unittest
 from ipaddress import ip_address
 from unittest.mock import patch
 
@@ -136,6 +137,56 @@ class TestMenuOperations(TestCase):
 
         with self.assertRaisesMessage(ValidationError, "Can only exist one main menu for module"):
             Menu.objects.execute_create(name='Menu 2', module=module1)
+
+    # @unittest.skip('Probar primero la busqueda por id')
+    def test_update_menu_name(self):
+        module1 = Module.objects.create(name="Module 2")
+        menu1 = Menu.objects.create(name='Menu 1', module=module1, parent=None)
+
+        menu1_update = Menu.objects.execute_update(menu1.id, "My menu 1")
+
+        self.assertEqual(menu1_update.id, menu1.id)
+        self.assertEqual(menu1_update.name, "My menu 1")
+
+    def test_create_menu_with_order_same_module(self):
+        module1 = Module.objects.create(name="Module 1")
+
+        menu1 = Menu.objects.execute_create(
+            name='  Menu 1  ', module=module1)
+        menu1_1 = Menu.objects.execute_create(
+            name='  Menu 1.1  ', parent=menu1)
+        menu1_2 = Menu.objects.execute_create(
+            name='  Menu 1.2  ', parent=menu1)
+
+        self.assertEqual(menu1.order, 1)
+        self.assertEqual(menu1_1.order, 1)
+        self.assertEqual(menu1_2.order, 2)
+
+    def test_create_menu_with_order_different_module(self):
+        module1 = Module.objects.create(name="Module 1")
+        module2 = Module.objects.create(name="Module 2")
+
+        menu1_1 = Menu.objects.execute_create(
+            name='  Menu 1  ', module=module1)
+        menu2_1 = Menu.objects.execute_create(
+            name='  Menu 2  ', module=module2)
+
+        self.assertEqual(menu1_1.order, 1)
+        self.assertEqual(menu2_1.order, 1)
+
+
+class TestMenuQueries(TestCase):
+
+    def test_find_by_pk(self):
+        module1 = Module.objects.create(name="Module 2")
+        menu1 = Menu.objects.create(name="Menu 1", module=module1)
+        new_menu = Menu.objects.find_by_pk(pk=menu1.pk)
+
+        self.assertEqual(new_menu.name, 'Menu 1')
+
+    def test_find_by_pk_not_exist(self):
+        with self.assertRaisesMessage(Menu.DoesNotExist, "The menu with the pk = 1 doesnt exist"):
+            Menu.objects.find_by_pk(pk=1)
 
     # # @patch('django.db.models.query.QuerySet')
     # def test_find_by_pk2(self):
