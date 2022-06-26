@@ -174,6 +174,27 @@ class TestMenuOperations(TestCase):
         self.assertEqual(menu1_1.order, 1)
         self.assertEqual(menu2_1.order, 1)
 
+    def test_get_num_order_menu(self):
+        module1 = Module.objects.create(name="Module 1")
+        module2 = Module.objects.create(name="Module 2")
+        module3 = Module.objects.create(name="Module 3")
+
+        menu1 = Menu.objects.create(name="Menu 1", module=module1, order=1)
+        menu1_1 = Menu.objects.create(
+            name="Menu 1.1", module=module1, parent=menu1, order=1)
+        menu1_2 = Menu.objects.create(
+            name="Menu 1.2", module=module1, parent=menu1, order=2)
+
+        menu2 = Menu.objects.create(name="Menu 2", module=module2, order=1)
+
+        order_menu_1_3 = Menu.objects.next_order_num(parent=menu1)
+        order_menu_2_1 = Menu.objects.next_order_num(parent=menu2)
+        order_menu_3 = Menu.objects.next_order_num(module=module3)
+
+        self.assertEqual(order_menu_1_3, 3)
+        self.assertEqual(order_menu_2_1, 1)
+        self.assertEqual(order_menu_3, 1)
+
 
 class TestMenuQueries(TestCase):
 

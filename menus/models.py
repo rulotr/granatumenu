@@ -73,9 +73,7 @@ class MenuManager(GenericManager):
         if parent:
             module = parent.module
 
-        order = self.filter(module=module, parent=parent).aggregate(
-            num=Coalesce(Max('order'), 0))['num']
-        order += 1
+        order = self.next_order_num(module=module, parent=parent)
 
         menu = self.model(name=name, module=module, parent=parent, order=order)
         menu.full_clean()
@@ -88,6 +86,13 @@ class MenuManager(GenericManager):
         menu.full_clean()
         menu.save(update_fields=['name'])
         return menu
+
+    def next_order_num(self, module=None, parent=None):
+        if parent:
+            module = parent.module
+        order = self.filter(module=module, parent=parent).aggregate(
+            num=Coalesce(Max('order'), 0))['num']
+        return order + 1
 
 
 class Module(models.Model):
