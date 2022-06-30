@@ -6,6 +6,7 @@ import unittest
 from ipaddress import ip_address
 from unittest.mock import patch
 
+import factory
 import psycopg2
 import pytest
 from django.core import exceptions
@@ -17,6 +18,29 @@ from django_mock_queries.query import MockModel, MockSet
 
 # My app
 from menus.models import Menu, Module
+
+
+class ModuleFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Module
+    name = factory.Sequence(lambda n: 'Module {}'.format(n+1))
+
+
+class MenuFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Menu
+
+    name = factory.Sequence(lambda n: 'Menu {}'.format(n+1))
+    module = None  # factory.SubFactory(ModuleFactory)
+    # factory.SubFactory('menus.tests.test_managers.MenuFactory')
+    parent = None
+    order = None
+
+    @classmethod
+    def _adjust_kwargs(cls, **kwargs):
+        if kwargs['parent']:
+            kwargs['module'] = kwargs['parent'].module
+        return kwargs
 
 
 class TestModuleOperations(TestCase):
@@ -104,9 +128,9 @@ class TestMenuOperations(TestCase):
         self.assertTrue(Menu.objects.count() == 1)
 
     def test_create_child_node(self):
-        module1 = Module.objects.create(name="Module 1")
-        module2 = Module.objects.create(name="Module 2")
-        menu1 = Menu.objects.create(name='Menu 1', module=module1, parent=None)
+        module1 = ModuleFactory()
+        module2 = ModuleFactory()
+        menu1 = MenuFactory(module=module1, order=1)
 
         child_menu = Menu.objects.execute_create(
             name='Child 1', module=module2, parent=menu1)
@@ -119,8 +143,9 @@ class TestMenuOperations(TestCase):
             Menu.objects.execute_create(name='Menu 1')
 
     def test_create_menu_same_name(self):
-        module1 = Module.objects.create(name="Module 1")
-        module2 = Module.objects.create(name="Module 2")
+        module1 = ModuleFactory()
+        module2 = ModuleFactory()
+
         menu1 = Menu.objects.execute_create(
             name='  Menu 1  ', module=module1)
         menu2 = Menu.objects.execute_create(
@@ -132,7 +157,8 @@ class TestMenuOperations(TestCase):
         self.assertTrue(Menu.objects.count() == 2)
 
     def test_create_two_main_menu_same_module(self):
-        module1 = Module.objects.create(name="Module 1")
+        module1 = ModuleFactory()
+
         Menu.objects.execute_create(name='Menu 1', module=module1)
 
         with self.assertRaisesMessage(ValidationError, "Can only exist one main menu for module"):
@@ -140,14 +166,15 @@ class TestMenuOperations(TestCase):
 
     # @unittest.skip('Probar primero la busqueda por id')
     def test_update_menu_name(self):
-        module1 = Module.objects.create(name="Module 2")
-        menu1 = Menu.objects.create(name='Menu 1', module=module1, parent=None)
+        module1 = ModuleFactory()
+        menu1 = MenuFactory(module=module1, order=1)
 
         menu1_update = Menu.objects.execute_update(menu1.id, "My menu 1")
 
         self.assertEqual(menu1_update.id, menu1.id)
         self.assertEqual(menu1_update.name, "My menu 1")
 
+    @unittest.skip('Este debe de ser un test de integracion')
     def test_create_menu_with_order_same_module(self):
         module1 = Module.objects.create(name="Module 1")
 
@@ -162,6 +189,7 @@ class TestMenuOperations(TestCase):
         self.assertEqual(menu1_1.order, 1)
         self.assertEqual(menu1_2.order, 2)
 
+    @unittest.skip('Este debe de ser un test de integracion')
     def test_create_menu_with_order_different_module(self):
         module1 = Module.objects.create(name="Module 1")
         module2 = Module.objects.create(name="Module 2")
@@ -174,26 +202,54 @@ class TestMenuOperations(TestCase):
         self.assertEqual(menu1_1.order, 1)
         self.assertEqual(menu2_1.order, 1)
 
-    def test_get_num_order_menu(self):
-        module1 = Module.objects.create(name="Module 1")
-        module2 = Module.objects.create(name="Module 2")
-        module3 = Module.objects.create(name="Module 3")
-
-        menu1 = Menu.objects.create(name="Menu 1", module=module1, order=1)
-        menu1_1 = Menu.objects.create(
-            name="Menu 1.1", module=module1, parent=menu1, order=1)
-        menu1_2 = Menu.objects.create(
-            name="Menu 1.2", module=module1, parent=menu1, order=2)
-
-        menu2 = Menu.objects.create(name="Menu 2", module=module2, order=1)
+    def test_get_num_order_next_menu(self):
+        module1 = ModuleFactory()
+        menu1 = MenuFactory(module=module1, order=1)
+        menu1_1 = MenuFactory(parent=menu1, order=1)
+        menu1_2 = MenuFactory(parent=menu1, order=2)
+        module2 = ModuleFactory()
+        menu2 = MenuFactory(module=module2, order=1)
+        module3 = ModuleFactory()
 
         order_menu_1_3 = Menu.objects.next_order_num(parent=menu1)
+        order_menu_1_2_1 = Menu.objects.next_order_num(parent=menu1_2)
         order_menu_2_1 = Menu.objects.next_order_num(parent=menu2)
+        order_menu_2_2 = Menu.objects.next_order_num(module=module2)
         order_menu_3 = Menu.objects.next_order_num(module=module3)
 
         self.assertEqual(order_menu_1_3, 3)
+        self.assertEqual(order_menu_1_2_1, 1)
         self.assertEqual(order_menu_2_1, 1)
+        self.assertEqual(order_menu_2_2, 2)
         self.assertEqual(order_menu_3, 1)
+
+    def get_menus_by_order(self, module):
+        return Menu.objects.filter(
+            module=module).order_by('order').values_list('name', 'order')
+
+    def test_move_order_of_menu(self):
+        module1 = ModuleFactory()
+        MenuFactory.reset_sequence(0)
+        menu1_1 = MenuFactory(module=module1, order=1)
+        menu1_2 = MenuFactory(module=module1, order=2)
+        menu1_3 = MenuFactory(module=module1, order=3)
+        menu1_4 = MenuFactory(module=module1, order=4)
+        menu1_5 = MenuFactory(module=module1, order=5)
+
+        menus_order = self.get_menus_by_order(module=module1)
+        self.assertQuerysetEqual(
+            menus_order, [('Menu 1', 1), ('Menu 2', 2), ('Menu 3', 3), ('Menu 4', 4), ('Menu 5', 5)])
+
+        Menu.objects.change_order_to(menu1_5, 1)
+        menus_order = self.get_menus_by_order(module=module1)
+
+        self.assertQuerysetEqual(
+            menus_order, [('Menu 5', 1), ('Menu 1', 2), ('Menu 2', 3), ('Menu 3', 4), ('Menu 4', 5)])
+
+        Menu.objects.change_order_to(menu1_5, 5)
+        menus_order = self.get_menus_by_order(module=module1)
+        self.assertQuerysetEqual(
+            menus_order, [('Menu 1', 1), ('Menu 2', 2), ('Menu 3', 3), ('Menu 4', 4), ('Menu 5', 5)])
 
 
 class TestMenuQueries(TestCase):

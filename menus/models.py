@@ -4,10 +4,11 @@
 from ast import Mod
 from ipaddress import ip_address
 from turtle import position
+from xml.etree.ElementTree import register_namespace
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Max
+from django.db.models import F, Max
 from django.db.models.functions import Coalesce, Lower
 from django.db.models.query import QuerySet
 
@@ -93,6 +94,18 @@ class MenuManager(GenericManager):
         order = self.filter(module=module, parent=parent).aggregate(
             num=Coalesce(Max('order'), 0))['num']
         return order + 1
+
+    def change_order_to(self, menu, new_order):
+        menu.refresh_from_db()
+        if(menu.order < new_order):
+            self.filter(parent=menu.parent,
+                        order__gt=menu.order, order__lte=new_order
+                        ).update(order=F('order')-1)
+        if(menu.order > new_order):
+            self.filter(parent=menu.parent,
+                        order__lt=menu.order, order__gte=new_order
+                        ).update(order=F('order')+1)
+        self.filter(pk=menu.id).update(order=new_order)
 
 
 class Module(models.Model):
