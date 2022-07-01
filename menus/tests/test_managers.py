@@ -29,7 +29,7 @@ class ModuleFactory(factory.django.DjangoModelFactory):
 class MenuFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Menu
-
+    pk = factory.Sequence(lambda n: n+1)
     name = factory.Sequence(lambda n: 'Menu {}'.format(n+1))
     module = None  # factory.SubFactory(ModuleFactory)
     # factory.SubFactory('menus.tests.test_managers.MenuFactory')
@@ -225,7 +225,7 @@ class TestMenuOperations(TestCase):
 
     def get_menus_by_order(self, module):
         return Menu.objects.filter(
-            module=module).order_by('order').values_list('id', 'name', 'order')
+            module=module).order_by('order').values_list('id', 'order')
 
     def test_change_order_menu_last_to_first(self):
         module1 = ModuleFactory()
@@ -234,31 +234,55 @@ class TestMenuOperations(TestCase):
 
         menus_order = self.get_menus_by_order(module=module1)
         self.assertQuerysetEqual(
-            menus_order,
-            [(1, 'Menu 1', 1), (2, 'Menu 2', 2), (3, 'Menu 3', 3), (4, 'Menu 4', 4), (5, 'Menu 5', 5)]
-            )
-
-        #menu1_1 = MenuFactory(module=module1, order=1)
-        #menu1_2 = MenuFactory(module=module1, order=2)
-        #menu1_3 = MenuFactory(module=module1, order=3)
-        #menu1_4 = MenuFactory(module=module1, order=4)
-        #menu1_5 = MenuFactory(module=module1, order=5)
-
-        ''' menus_order = self.get_menus_by_order(module=module1)
-        self.assertQuerysetEqual(
-            menus_order, [('Menu 1', 1), ('Menu 2', 2), ('Menu 3', 3), ('Menu 4', 4), ('Menu 5', 5)])
-
-        Menu.objects.change_order_to(menu1_5, 1)
-        menus_order = self.get_menus_by_order(module=module1)
-
-        self.assertQuerysetEqual(
-            menus_order, [('Menu 5', 1), ('Menu 1', 2), ('Menu 2', 3), ('Menu 3', 4), ('Menu 4', 5)])
-
-        Menu.objects.change_order_to(menu1_5, 5)
+            menus_order, [(1, 1), (2, 2), (3, 3), (4, 4), (5,  5)]
+        )
+        Menu.objects.change_order_to(pk=5, new_order=1)
         menus_order = self.get_menus_by_order(module=module1)
         self.assertQuerysetEqual(
-            menus_order, [('Menu 1', 1), ('Menu 2', 2), ('Menu 3', 3), ('Menu 4', 4), ('Menu 5', 5)])
- '''
+            menus_order, [(5,  1), (1, 2), (2, 3), (3, 4), (4, 5), ]
+        )
+
+    def test_change_order_menu_first_to_last(self):
+        module1 = ModuleFactory()
+        MenuFactory.reset_sequence(0)
+        MenuFactory.create_batch(5, module=module1, parent=None)
+
+        menus_order = self.get_menus_by_order(module=module1)
+        self.assertQuerysetEqual(
+            menus_order, [(1, 1), (2, 2), (3, 3), (4, 4), (5,  5)]
+        )
+        Menu.objects.change_order_to(pk=1, new_order=5)
+        menus_order = self.get_menus_by_order(module=module1)
+        self.assertQuerysetEqual(
+            menus_order, [(2, 1), (3, 2), (4, 3), (5,  4), (1, 5)]
+        )
+
+    def test_change_order_menu_intemediate(self):
+        module1 = ModuleFactory()
+        MenuFactory.reset_sequence(0)
+        MenuFactory.create_batch(5, module=module1, parent=None)
+
+        menus_order = self.get_menus_by_order(module=module1)
+        self.assertQuerysetEqual(
+            menus_order, [(1, 1), (2, 2), (3, 3), (4, 4), (5,  5)]
+        )
+        Menu.objects.change_order_to(pk=2, new_order=4)
+        menus_order = self.get_menus_by_order(module=module1)
+        self.assertQuerysetEqual(
+            menus_order, [(1, 1), (3, 2), (4, 3), (2, 4), (5,  5)]
+        )
+
+        Menu.objects.change_order_to(pk=2, new_order=2)
+        menus_order = self.get_menus_by_order(module=module1)
+        self.assertQuerysetEqual(
+            menus_order, [(1, 1), (2, 2), (3, 3), (4, 4), (5,  5)]
+        )
+
+        Menu.objects.change_order_to(pk=3, new_order=4)
+        menus_order = self.get_menus_by_order(module=module1)
+        self.assertQuerysetEqual(
+            menus_order, [(1, 1), (2, 2), (4, 3), (3, 4), (5,  5)]
+        )
 
 
 class TestMenuQueries(TestCase):

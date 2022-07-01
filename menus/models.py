@@ -95,16 +95,13 @@ class MenuManager(GenericManager):
             num=Coalesce(Max('order'), 0))['num']
         return order + 1
 
-    def change_order_to(self, menu, new_order):
-        menu.refresh_from_db()
-        if(menu.order < new_order):
-            self.filter(parent=menu.parent,
-                        order__gt=menu.order, order__lte=new_order
-                        ).update(order=F('order')-1)
-        if(menu.order > new_order):
-            self.filter(parent=menu.parent,
-                        order__lt=menu.order, order__gte=new_order
-                        ).update(order=F('order')+1)
+    def change_order_to(self, pk, new_order):
+        menu = self.find_by_pk(pk)
+        sort_order = sorted([menu.order, new_order])
+        add_order = -1 if menu.order < new_order else 1
+        self.filter(parent=menu.parent,
+                    order__gte=sort_order[0], order__lte=sort_order[1]
+                    ).update(order=F('order')+add_order)
         self.filter(pk=menu.id).update(order=new_order)
 
 
