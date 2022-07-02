@@ -284,6 +284,26 @@ class TestMenuOperations(TestCase):
             menus_order, [(1, 1), (2, 2), (4, 3), (3, 4), (5,  5)]
         )
 
+    def test_change_order_menu_dont_change_other_modules(self):
+        module1 = ModuleFactory()
+        module2 = ModuleFactory()
+        MenuFactory.reset_sequence(0)
+        MenuFactory.create_batch(2, module=module1, parent=None)
+        Menu.objects.create(id=3, name="Menu module 2",
+                            module=module2, parent=None, order=1)
+
+        Menu.objects.change_order_to(pk=1, new_order=2)
+        menus_order_module2 = self.get_menus_by_order(module=module2)
+        self.assertQuerysetEqual(
+            menus_order_module2, [(3, 1)]
+        )
+        # Menu.objects.change_order_to(pk=5, new_order=1)
+
+        # menus_order = self.get_menus_by_order(module=module1)
+        # self.assertQuerysetEqual(
+        #     menus_order, [(5,  1), (1, 2), (2, 3), (3, 4), (4, 5), ]
+        # )
+
 
 class TestMenuQueries(TestCase):
 

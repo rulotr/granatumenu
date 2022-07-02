@@ -99,7 +99,8 @@ class MenuManager(GenericManager):
         menu = self.find_by_pk(pk)
         sort_order = sorted([menu.order, new_order])
         add_order = -1 if menu.order < new_order else 1
-        self.filter(parent=menu.parent,
+
+        self.filter(module=menu.module, parent=menu.parent,
                     order__gte=sort_order[0], order__lte=sort_order[1]
                     ).update(order=F('order')+add_order)
         self.filter(pk=menu.id).update(order=new_order)
