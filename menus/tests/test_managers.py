@@ -69,14 +69,14 @@ class TestModuleOperations(TestCase):
         Module.objects.create(name="Module 1")
 
         with self.assertRaises(ValidationError):
-            module = Module(name="Module 1")
+            module = Module(name="MODULE 1")
             module.full_clean()
 
     def test_module_name_must_be_unique_not_full_clean(self):
         Module.objects.create(name="Module 1")
 
         with self.assertRaises(IntegrityError):
-            module = Module(name="Module 1")
+            module = Module(name="MODULE 1")
             module.save()
 
     def test_update_module_name(self):
@@ -165,14 +165,6 @@ class TestMenuOperations(TestCase):
 
         self.assertTrue(Menu.objects.count() == 2)
 
-    def test_create_two_main_menu_same_module(self):
-        module1 = ModuleFactory()
-
-        Menu.objects.execute_create(name='Menu 1', module=module1)
-
-        with self.assertRaisesMessage(ValidationError, "Can only exist one main menu for module"):
-            Menu.objects.execute_create(name='Menu 2', module=module1)
-
     # @unittest.skip('Probar primero la busqueda por id')
     def test_update_menu_name(self):
         module1 = ModuleFactory()
@@ -182,34 +174,6 @@ class TestMenuOperations(TestCase):
 
         self.assertEqual(menu1_update.id, menu1.id)
         self.assertEqual(menu1_update.name, "My menu 1")
-
-    @unittest.skip('Este debe de ser un test de integracion')
-    def test_create_menu_with_order_same_module(self):
-        module1 = Module.objects.create(name="Module 1")
-
-        menu1 = Menu.objects.execute_create(
-            name='  Menu 1  ', module=module1)
-        menu1_1 = Menu.objects.execute_create(
-            name='  Menu 1.1  ', parent=menu1)
-        menu1_2 = Menu.objects.execute_create(
-            name='  Menu 1.2  ', parent=menu1)
-
-        self.assertEqual(menu1.order, 1)
-        self.assertEqual(menu1_1.order, 1)
-        self.assertEqual(menu1_2.order, 2)
-
-    @unittest.skip('Este debe de ser un test de integracion')
-    def test_create_menu_with_order_different_module(self):
-        module1 = Module.objects.create(name="Module 1")
-        module2 = Module.objects.create(name="Module 2")
-
-        menu1_1 = Menu.objects.execute_create(
-            name='  Menu 1  ', module=module1)
-        menu2_1 = Menu.objects.execute_create(
-            name='  Menu 2  ', module=module2)
-
-        self.assertEqual(menu1_1.order, 1)
-        self.assertEqual(menu2_1.order, 1)
 
     def test_get_num_order_next_menu(self):
         module1 = ModuleFactory()
