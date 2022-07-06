@@ -67,8 +67,8 @@ class ParametroMenuAPITest(APITestCase):
         num_exist = Module.objects.count()
         self.assertEqual(resp_module.status_code, 400)
         self.assertEqual(num_exist, 1)
-        self.assertEqual(resp_module.data,
-                         {'name': ['The module already exists']})
+        self.assertEqual(resp_module.data['name'][0].title(),
+                         'The Module Already Exists')
 
     @mock.patch.object(Module, 'full_clean')
     def test_post_module_existent_integrity(self, mock_method):

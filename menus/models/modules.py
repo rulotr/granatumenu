@@ -33,7 +33,4 @@ class Module(models.Model):
     name = CharFieldTrim(
         max_length=15, error_messages=ErrorMessage.UNIQUE_ERROR, blank=False, unique=True)
 
-    # def clean(self):
-    #    self.name = self.name.capitalize()
-
     objects = ModuleManager()

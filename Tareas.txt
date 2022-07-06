@@ -8,7 +8,7 @@ Crear modulos
     *Eliminar un id que no existe
     *Consultar modulo por id
 
-Pruebas del Api
+Pruebas del Api de Modulos
     *Listar todos los modulos
     *Crear un nuevo modulo
     *Crear un modulo con un nombre que ya existe
@@ -33,3 +33,10 @@ Crear menus
     Se puede mover el nodo a otro nodo padre
     No se puede mover un nodo a otro que pertensca a otro modulo
     *No se puede crear un Menu sin modulo
+
+Pruebas del Api de menus
+    Crear un menu con un hijo
+    Crear varios menus padres para un modulo y revisar el orden
+    Modificar el nombre de un menu
+    Cambiar el orden de un menu
+    
