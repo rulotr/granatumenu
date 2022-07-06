@@ -25,10 +25,11 @@ Crear menus
     *Al crear un nodo hijo este pertenece al mismo modulo que el padre
     *Si el modulo no existe debe de informar
     *Los nombres de los nodos pueden repetirse
-    *Solo debe exisitir un nodo principal por moulo, este no tiene nodo padre
+    *Se pueden crear varios menus sin padre dentro del mismo modulos
+    (*No)Solo debe exisitir un nodo principal por moulo, este no tiene nodo padre
     *Se pueden modificar los nombres de los nodos
     *Los nodos tienen un orden consecutivo por nivel
-    Se puede modificar el orden de los nodos y esto modifica el orden de los del nivel 
+    *Se puede modificar el orden de los nodos y esto modifica el orden de los del nivel 
     Se puede mover el nodo a otro nodo padre
     No se puede mover un nodo a otro que pertensca a otro modulo
-    Que pasa si creo un Menu sin Modulo
+    *No se puede crear un Menu sin modulo
