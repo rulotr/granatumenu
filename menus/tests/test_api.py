@@ -1,4 +1,5 @@
 import json
+import unittest
 # Django
 from ipaddress import ip_address
 from re import I
@@ -19,11 +20,13 @@ from rest_framework.test import (
     CoreAPIClient,
     RequestsClient,
 )
+from yaml import serialize
 
-from menus.models import Module
+from menus.models import Menu, Module
+from menus.serializers import MenuSerializer
 
 
-class ParametroMenuAPITest(APITestCase):
+class ParametroModuleAPITest(APITestCase):
     LOCAL_HOST = ''  # "http://127.0.0.1:8000"
     staging_server = ""
 
@@ -167,3 +170,68 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(resp_get.status_code, 404)
         self.assertEqual(resp_get.data,  {
                          'message': 'The module with the pk = 9999 doesnt exist'})
+
+
+class ParametroMenuAPITest(APITestCase):
+
+    def setUp(self):
+        self.base_url_list = reverse('menus:menu-list')
+
+    # def base_url_detail(self, pk):
+    #    return reverse(
+    #        'menus:menu-detail', kwargs={'pk': pk})
+
+    def test_url_list(self):
+        url_list = '/api/menu/'
+        self.assertEqual(self.base_url_list, url_list)
+
+    def test_menuserializer_invalid(self):
+        data_menu = {'name': 'Menu 1', 'module': 1}
+
+        serializer = MenuSerializer(data=data_menu)
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(set(serializer.errors),  {'module'})
+
+    def test_menuserializer_valid(self):
+        Module.objects.create(name="Module 1")
+        data_menu = {'name': 'Menu 1', 'module': 1}
+
+        serializer = MenuSerializer(data=data_menu)
+        self.assertTrue(serializer.is_valid())
+        data = serializer.data
+        self.assertCountEqual(data.keys(), ['name', 'module', 'parent'])
+        self.assertEqual(data['name'], 'Menu 1')
+
+    def test_post_menu(self):
+        module1 = Module.objects.create(name="Module 1")
+
+        new_menu = {'name': 'Menu 1', 'module': module1.pk}
+
+        resp_module = self.client.post(self.base_url_list, new_menu)
+
+        self.assertEqual(resp_module.status_code, 201)
+        self.assertEqual(resp_module.data['name'], 'Menu 1')
+        self.assertEqual(Menu.objects.count(), 1)
+
+    def test_post_many_menus_same_module(self):
+        module1 = Module.objects.create(name="Module 1")
+
+        menu1 = {'name': 'Menu 1', 'module': module1.pk}
+        menu2 = {'name': 'Menu 2', 'module': module1.pk}
+        menu3 = {'name': 'Menu 3', 'module': module1.pk}
+
+        resp1 = self.client.post(self.base_url_list, menu1)
+        resp2 = self.client.post(self.base_url_list, menu2)
+        resp3 = self.client.post(self.base_url_list, menu3)
+
+        self.assertEqual(resp1.status_code, 201)
+        self.assertEqual(resp2.status_code, 201)
+        self.assertEqual(resp3.status_code, 201)
+        self.assertEqual(resp1.data,  {
+                         'id': 1, 'name': 'Menu 1', 'module': module1.pk, 'parent': None, 'order': 1})
+        self.assertEqual(resp2.data, {
+                         'id': 2, 'name': 'Menu 2', 'module': module1.pk, 'parent': None, 'order': 2})
+        self.assertEqual(resp3.data, {
+                         'id': 3, 'name': 'Menu 3', 'module': module1.pk, 'parent': None, 'order': 3})
+
+        self.assertEqual(Menu.objects.count(), 3)

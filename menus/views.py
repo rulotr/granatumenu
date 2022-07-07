@@ -10,8 +10,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from menus.models import Module
-from menus.serializers import ModuleSerializer
+from menus.models import Menu, Module
+from menus.serializers import MenuSerializer, ModuleSerializer
 
 # Create your views here.
 
@@ -68,3 +68,20 @@ class ModuleDetailApi(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Module.DoesNotExist as e:
             return Response({'message': e.args[0]}, status=status.HTTP_404_NOT_FOUND)
+
+
+class MenuListApi(APIView):
+    def post(self, request):
+        try:
+            serializer = MenuSerializer(data=request.data)
+            if serializer.is_valid():
+                new_module = Menu.objects.execute_create(
+                    **serializer.validated_data)
+                resp_seri = MenuSerializer(new_module)
+                return Response(resp_seri.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as e:
+            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError as e:
+            return Response({'message': e.args[0]}, status=status.HTTP_400_BAD_REQUEST)
