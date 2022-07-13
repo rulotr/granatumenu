@@ -85,3 +85,18 @@ class MenuListApi(APIView):
             return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
         except IntegrityError as e:
             return Response({'message': e.args[0]}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MenuDetailApi(APIView):
+    def put(self, request, pk):
+        try:
+            serializer = MenuSerializer(data=request.data)
+            if serializer.is_valid():
+                update_menu = Menu.objects.execute_update(
+                    pk, **serializer.validated_data)
+                resp_menu = MenuSerializer(update_menu)
+                return Response(resp_menu.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as e:
+            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)

@@ -177,24 +177,24 @@ class ParametroMenuAPITest(APITestCase):
     def setUp(self):
         self.base_url_list = reverse('menus:menu-list')
 
-    # def base_url_detail(self, pk):
-    #    return reverse(
-    #        'menus:menu-detail', kwargs={'pk': pk})
+    def base_url_detail(self, pk):
+        return reverse(
+            'menus:menu-detail', kwargs={'pk': pk})
 
     def test_url_list(self):
         url_list = '/api/menu/'
         self.assertEqual(self.base_url_list, url_list)
 
     def test_menuserializer_invalid(self):
-        data_menu = {'name': 'Menu 1', 'module': 1}
+        data_menu = {'name': 'Menu 1', 'module': 12}
 
         serializer = MenuSerializer(data=data_menu)
         self.assertFalse(serializer.is_valid())
         self.assertEqual(set(serializer.errors),  {'module'})
 
     def test_menuserializer_valid(self):
-        Module.objects.create(name="Module 1")
-        data_menu = {'name': 'Menu 1', 'module': 1}
+        module1 = Module.objects.create(name="Module 1")
+        data_menu = {'name': 'Menu 1', 'module': module1.pk}
 
         serializer = MenuSerializer(data=data_menu)
         self.assertTrue(serializer.is_valid())
@@ -228,10 +228,92 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(resp2.status_code, 201)
         self.assertEqual(resp3.status_code, 201)
         self.assertEqual(resp1.data,  {
-                         'id': 1, 'name': 'Menu 1', 'module': module1.pk, 'parent': None, 'order': 1})
+                         'id': resp1.data['id'], 'name': 'Menu 1', 'module': module1.pk, 'parent': None, 'order': 1})
         self.assertEqual(resp2.data, {
-                         'id': 2, 'name': 'Menu 2', 'module': module1.pk, 'parent': None, 'order': 2})
+                         'id': resp2.data['id'], 'name': 'Menu 2', 'module': module1.pk, 'parent': None, 'order': 2})
         self.assertEqual(resp3.data, {
-                         'id': 3, 'name': 'Menu 3', 'module': module1.pk, 'parent': None, 'order': 3})
+                         'id': resp3.data['id'], 'name': 'Menu 3', 'module': module1.pk, 'parent': None, 'order': 3})
 
         self.assertEqual(Menu.objects.count(), 3)
+
+    def test_post_many_menus_three_levels(self):
+        module1 = Module.objects.create(name="Module 1")
+        menu1 = {'name': 'Menu 1', 'module': module1.pk}
+        resp1 = self.client.post(self.base_url_list, menu1)
+
+        menu1_1 = {'name': 'Menu 1.1', 'parent': resp1.data['id']}
+        resp_1_1 = self.client.post(self.base_url_list, menu1_1)
+
+        menu1_2 = {'name': 'Menu 1.1.1', 'parent': resp_1_1.data['id']}
+        resp_1_1_1 = self.client.post(self.base_url_list, menu1_2)
+        menu1_3 = {'name': 'Menu 1.1.2', 'parent': resp_1_1.data['id']}
+        resp_1_1_1 = self.client.post(self.base_url_list, menu1_3)
+
+        self.assertEqual(resp1.status_code, 201)
+        self.assertEqual(resp_1_1.status_code, 201)
+        self.assertEqual(resp_1_1_1.status_code, 201)
+
+        menus = Menu.objects.all().order_by('id').values('name', 'parent', 'order')
+        self.assertEqual(menus.count(), 4)
+
+        self.assertDictEqual(
+            menus[0], {'name': 'Menu 1', 'parent': None, 'order': 1})
+        self.assertDictEqual(
+            menus[1], {'name': 'Menu 1.1', 'parent': menu1_1['parent'], 'order': 1})
+        self.assertDictEqual(
+            menus[2], {'name': 'Menu 1.1.1', 'parent': menu1_2['parent'], 'order': 1})
+        self.assertDictEqual(
+            menus[3], {'name': 'Menu 1.1.2', 'parent': menu1_2['parent'], 'order': 2})
+
+    def test_post_menus_different_module(self):
+        module1 = Module.objects.create(name="Module 1")
+        module2 = Module.objects.create(name="Module 2")
+
+        menu1 = {'name': 'Menu M1', 'module': module1.pk}
+        resp1 = self.client.post(self.base_url_list, menu1)
+        menu2 = {'name': 'Menu M2', 'module': module2.pk}
+        resp2 = self.client.post(self.base_url_list, menu2)
+        menu3 = {'name': 'Menu M2.1', 'parent': resp2.data['id']}
+        resp3 = self.client.post(self.base_url_list, menu3)
+
+        self.assertEqual(resp1.status_code, 201)
+        self.assertEqual(resp2.status_code, 201)
+        self.assertEqual(resp3.status_code, 201)
+
+        self.assertEqual(resp1.data['module'], module1.pk)
+        self.assertEqual(resp2.data['module'], module2.pk)
+        self.assertEqual(resp3.data['module'], module2.pk)
+
+    def test_post_menu_not_module(self):
+        menu1 = {'name': 'Menu M1', 'module': 1}
+        resp = self.client.post(self.base_url_list, menu1)
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.data['module'][0].title(
+        ), 'Invalid Pk "1" - Object Does Not Exist.')
+
+    def test_post_menu_max_length(self):
+        module1 = Module.objects.create(name="Module 1")
+        menu1 = {'name': 'Menu with max length', 'module': module1.pk}
+        resp = self.client.post(self.base_url_list, menu1)
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.data['name'][0].title(
+        ), 'Ensure This Field Has No More Than 15 Characters.')
+
+    def test_url_detail(self):
+        url_detail = '/api/menu/1/'
+        self.assertEqual(self.base_url_detail(pk=1), url_detail)
+
+    def test_change_name_menu(self):
+        module1 = Module.objects.create(name='Module 1')
+        menu1 = {'name': 'Menu 1', 'module': module1.pk}
+        resp = self.client.post(self.base_url_list, menu1)
+
+        update_menu = {'name': 'Menu 1 Change'}
+        resp_module = self.client.put(
+            self.base_url_detail(pk=resp.data['id']), update_menu)
+        menu_update = Menu.objects.all().first()
+
+        self.assertEqual(resp_module.status_code, 200)
+        self.assertEqual(menu_update.name, 'Menu 1 change')
