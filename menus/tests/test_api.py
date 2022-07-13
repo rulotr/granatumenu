@@ -1,34 +1,25 @@
 import json
 import unittest
 # Django
-from ipaddress import ip_address
 from re import I
 from socket import IP_RECVDSTADDR
-from turtle import update
 from urllib import response
 
 import mock
 from django.urls import reverse
-# from django.test import TestCase
-# from django.db import IntegrityError
-# from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.test import (
     APIClient,
     APITestCase,
     APITransactionTestCase,
-    CoreAPIClient,
-    RequestsClient,
+    URLPatternsTestCase,
 )
-from yaml import serialize
 
 from menus.models import Menu, Module
 from menus.serializers import MenuSerializer
 
 
 class ParametroModuleAPITest(APITestCase):
-    LOCAL_HOST = ''  # "http://127.0.0.1:8000"
-    staging_server = ""
 
     def setUp(self):
         self.base_url_list = reverse('menus:module-list')
