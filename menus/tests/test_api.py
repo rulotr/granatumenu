@@ -302,9 +302,33 @@ class ParametroMenuAPITest(APITestCase):
         resp = self.client.post(self.base_url_list, menu1)
 
         update_menu = {'name': 'Menu 1 Change'}
-        resp_module = self.client.put(
+        resp_memu = self.client.put(
             self.base_url_detail(pk=resp.data['id']), update_menu)
         menu_update = Menu.objects.all().first()
 
-        self.assertEqual(resp_module.status_code, 200)
+        self.assertEqual(resp_memu.status_code, 200)
         self.assertEqual(menu_update.name, 'Menu 1 change')
+
+    def test_change_order_menu(self):
+        module1 = Module.objects.create(name="Module 1")
+
+        menu1 = {'name': 'Menu 1', 'module': module1.pk}
+        menu2 = {'name': 'Menu 2', 'module': module1.pk}
+        menu3 = {'name': 'Menu 3', 'module': module1.pk}
+
+        menu1['pk'] = self.client.post(self.base_url_list, menu1).data['id']
+        menu2['pk'] = self.client.post(self.base_url_list, menu2)
+        menu3['pk'] = self.client.post(self.base_url_list, menu3)
+
+        change_order = {'order': 2, 'name': 'Change my name'}
+        resp_menu = self.client.patch(
+            self.base_url_detail(pk=menu1['pk']), change_order)
+        self.assertEqual(resp_menu.status_code, 200)
+
+        menus = Menu.objects.all().order_by('order').values('name')
+        self.assertDictEqual(
+            menus[0], {'name': 'Menu 2'})
+        self.assertDictEqual(
+            menus[1], {'name': 'Menu 1'})
+        self.assertDictEqual(
+            menus[2], {'name': 'Menu 3'})

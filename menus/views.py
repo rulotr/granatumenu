@@ -6,9 +6,10 @@ from xml.dom import ValidationErr
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.shortcuts import render
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from yaml import serialize
 
 from menus.models import Menu, Module
 from menus.serializers import MenuSerializer, ModuleSerializer
@@ -88,6 +89,9 @@ class MenuListApi(APIView):
 
 
 class MenuDetailApi(APIView):
+    class MenuPartialSerializer(serializers.Serializer):
+        order = serializers.IntegerField()
+
     def put(self, request, pk):
         try:
             serializer = MenuSerializer(data=request.data)
@@ -100,3 +104,9 @@ class MenuDetailApi(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except ValidationError as e:
             return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk):
+        serializer = self.MenuPartialSerializer(data=request.data)
+        serializer.is_valid()
+        Menu.objects.execute_partial_update(pk, **serializer.validated_data)
+        return Response(request.data, status=status.HTTP_200_OK)

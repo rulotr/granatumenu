@@ -283,6 +283,12 @@ class TestMenuOperations(TestCase):
             menus_order_module2, [(3, 1)]
         )
 
+    @patch.object(Menu.objects, 'change_order_to')
+    def test__execute_partial_update_called_change_order_to(self, mock_change_order_to):
+        Menu.objects.execute_partial_update(
+            pk=1, order=1)
+        mock_change_order_to.assert_called()
+
 
 class TestMenuQueries(TestCase):
 

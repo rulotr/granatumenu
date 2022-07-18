@@ -27,6 +27,9 @@ class MenuManager(GenericManager):
         menu.save(update_fields=['name'])
         return menu
 
+    def execute_partial_update(self, pk, order):
+        self.change_order_to(pk=pk, new_order=order)
+
     def next_order_num(self, module=None, parent=None):
         if parent:
             module = parent.module
