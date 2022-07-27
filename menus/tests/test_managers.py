@@ -31,9 +31,8 @@ class MenuFactory(factory.django.DjangoModelFactory):
         model = Menu
     pk = factory.Sequence(lambda n: n+1)
     name = factory.Sequence(lambda n: 'Menu {}'.format(n+1))
-    module = None  # factory.SubFactory(ModuleFactory)
-    # factory.SubFactory('menus.tests.test_managers.MenuFactory')
-    parent = None
+    module = factory.LazyAttribute(lambda x: ModuleFactory())
+    parent = None  # factory.LazyAttribute(lambda x: MenuFactory(parent=None))
     order = factory.Sequence(lambda n: n+1)
 
     @classmethod
@@ -302,3 +301,53 @@ class TestMenuQueries(TestCase):
     def test_find_by_pk_not_exist(self):
         with self.assertRaisesMessage(Menu.DoesNotExist, "The menu with the pk = 1 doesnt exist"):
             Menu.objects.find_by_pk(pk=1)
+
+    def test_get_tree_menu_for_module_one_level(self):
+        module1 = ModuleFactory()
+        module2 = ModuleFactory()
+        MenuFactory.reset_sequence(0)
+        MenuFactory.create_batch(5, module=module1, parent=None)
+        MenuFactory.create_batch(2, module=module2, parent=None)
+
+        tree_menu = Menu.objects.get_tree_by_module(module=module1.pk)
+        module_id = module1.pk
+        self.assertEqual(len(tree_menu), 5)
+        self.assertEqual(tree_menu[0], {
+                         'module': module_id, 'id': 1, 'name': 'Menu 1', 'order': 1, 'parent': None, 'sub_menu': []})
+        self.assertEqual(tree_menu[1], {
+                         'module': module_id, 'id': 2, 'name': 'Menu 2', 'order': 2, 'parent': None, 'sub_menu': []})
+        self.assertEqual(tree_menu[2], {
+                         'module': module_id, 'id': 3, 'name': 'Menu 3', 'order': 3, 'parent': None, 'sub_menu': []})
+        self.assertEqual(tree_menu[3], {
+                         'module': module_id, 'id': 4, 'name': 'Menu 4', 'order': 4, 'parent': None, 'sub_menu': []})
+        self.assertEqual(tree_menu[4], {
+                         'module': module_id, 'id': 5, 'name': 'Menu 5', 'order': 5, 'parent': None, 'sub_menu': []})
+
+    def test_get_tree_menu_for_module_with_submenu(self):
+        module1 = ModuleFactory()
+        MenuFactory.reset_sequence(0)
+        menu1 = MenuFactory(module=module1, order=2)
+        menu2 = MenuFactory(module=module1, order=1)
+        #MenuFactory.create_batch(2, module=module1, parent=menu1)
+
+        menu1_1 = MenuFactory(parent=menu1, order=1)
+        menu1_2 = MenuFactory(parent=menu1, order=2)
+        menu2_1 = MenuFactory(parent=menu2, order=1)
+
+        menu1_1_1 = MenuFactory(parent=menu1_1, order=1)
+        tree_menu = Menu.objects.get_tree_by_module(module=module1.pk)
+
+        self.assertEqual(len(tree_menu), 2)
+        self.assertEqual(tree_menu[0]['id'], menu2.id)
+        self.assertEqual(len(tree_menu[0]['sub_menu']), 1)
+        self.assertEqual(tree_menu[0]['sub_menu'][0]['id'], menu2_1.id)
+
+        self.assertEqual(tree_menu[1]['id'], menu1.id)
+        self.assertEqual(len(tree_menu[1]['sub_menu']), 2)
+        self.assertEqual(tree_menu[1]['sub_menu'][0]['id'], menu1_1.id)
+        self.assertEqual(len(tree_menu[1]['sub_menu'][0]['sub_menu']), 1)
+
+        self.assertEqual(tree_menu[1]['sub_menu'][1]['id'], menu1_2.id)
+
+        # self.assertEqual(tree_menu[0], {
+        #                 'module': 17, 'id': 1, 'name': 'Menu 1', 'order': 1, 'parent': None})

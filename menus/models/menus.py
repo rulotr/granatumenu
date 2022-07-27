@@ -47,6 +47,26 @@ class MenuManager(GenericManager):
                     ).update(order=F('order')+add_order)
         self.filter(pk=menu.id).update(order=new_order)
 
+    def get_tree_by_module(self, module):
+        nodes_menu = self.filter(module__id=module)
+
+        nodes_menu = sorted(nodes_menu, key=lambda x: x.order)
+
+        tree_menu = self.build_tree_menu(nodes_menu, None)
+
+        return tree_menu
+
+    def build_tree_menu(self, nodes_menu, id_parent):
+        tree_menu = [{'module': node.module.id,
+                      'id': node.id,
+                      'name': node.name,
+                      'order': node.order,
+                      'parent': node.parent_id,
+                      'sub_menu': self.build_tree_menu(nodes_menu, node.id)}
+                     for node in nodes_menu if node.parent_id == id_parent]
+
+        return tree_menu
+
 
 class Menu(models.Model):
     name = CharFieldTrim(
