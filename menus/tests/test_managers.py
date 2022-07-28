@@ -311,17 +311,19 @@ class TestMenuQueries(TestCase):
         MenuFactory.create_batch(2, module=module2, parent=None)
 
         tree_menu = Menu.objects.get_tree_by_module(module=module1.pk)
+        tree1, tree2, tree3, tree4, tree5 = tree_menu
+
         module_id = module1.pk
         self.assertEqual(len(tree_menu), 5)
-        self.assertEqual(tree_menu[0], TreeMenu(
+        self.assertEqual(tree1, TreeMenu(
             id=1, module=module_id, name='Menu 1', order=1, parent=None, sub_menu=[]))
-        self.assertEqual(tree_menu[1], TreeMenu(
+        self.assertEqual(tree2, TreeMenu(
             id=2, module=module_id, name='Menu 2', order=2, parent=None, sub_menu=[]))
-        self.assertEqual(tree_menu[2], TreeMenu(
+        self.assertEqual(tree3, TreeMenu(
             id=3, module=module_id, name='Menu 3', order=3, parent=None, sub_menu=[]))
-        self.assertEqual(tree_menu[3], TreeMenu(
+        self.assertEqual(tree4, TreeMenu(
             id=4, module=module_id, name='Menu 4', order=4, parent=None, sub_menu=[]))
-        self.assertEqual(tree_menu[4], TreeMenu(
+        self.assertEqual(tree5, TreeMenu(
             id=5, module=module_id, name='Menu 5', order=5, parent=None, sub_menu=[]))
 
     def test_get_tree_menu_for_module_with_submenu(self):
@@ -336,27 +338,24 @@ class TestMenuQueries(TestCase):
 
         menu1_1_1 = MenuFactory(parent=menu1_1, order=1)
         tree_menu = Menu.objects.get_tree_by_module(module=module1.pk)
-        print(tree_menu)
-        tree1 = tree_menu[0]
+
+        tree1, tree2 = tree_menu
         tree1_1 = tree1.sub_menu[0]
 
-        tree2 = tree_menu[1]
-        tree2_1 = tree2.sub_menu[0]
+        tree2_1, tree2_2 = tree2.sub_menu
         tree2_1_1 = tree2_1.sub_menu[0]
-        tree2_2 = tree2.sub_menu[1]
+
+        self.assertEqual(len(tree_menu), 2)
+        self.assertEqual(len(tree1.sub_menu), 1)
+        self.assertEqual(len(tree1_1.sub_menu), 0)
+        self.assertEqual(len(tree2.sub_menu), 2)
+        self.assertEqual(len(tree2_1.sub_menu), 1)
+        self.assertEqual(len(tree2_1_1.sub_menu), 0)
+        self.assertEqual(len(tree2_2.sub_menu), 0)
 
         self.assertEqual(tree1.path(), menu2.name)
         self.assertEqual(tree1_1.path(), f'|---{menu2_1.name}')
-
-        self.assertEqual(len(tree_menu), 2)
-        self.assertEqual(tree1.id, menu2.id)
-        self.assertEqual(len(tree1.sub_menu), 1)
-        self.assertEqual(tree1_1.id, menu2_1.id)
-
-        self.assertEqual(tree2.id, menu1.id)
-        self.assertEqual(len(tree2.sub_menu), 2)
-        self.assertEqual(tree2_1.id, menu1_1.id)
-        self.assertEqual(len(tree2_1.sub_menu), 1)
-        self.assertEqual(tree2_1_1.id, menu1_1_1.id)
-
-        self.assertEqual(tree2_2.id, menu1_2.id)
+        self.assertEqual(tree2.path(), menu1.name)
+        self.assertEqual(tree2_1.path(), f'|---{menu1_1.name}')
+        self.assertEqual(tree2_1_1.path(), f'|---|---{menu1_1_1.name}')
+        self.assertEqual(tree2_2.path(), f'|---{menu1_2.name}')
