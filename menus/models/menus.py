@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from typing import List
+
 from django.db import models
 from django.db.models import F, Max
 from django.db.models.functions import Coalesce
@@ -52,11 +55,25 @@ class MenuManager(GenericManager):
 
         nodes_menu = sorted(nodes_menu, key=lambda x: x.order)
 
-        tree_menu = self.build_tree_menu(nodes_menu, None)
+        tree_menu = self.build_tree_menu(nodes_menu, None, 0)
 
         return tree_menu
 
-    def build_tree_menu(self, nodes_menu, id_parent):
+    def build_tree_menu(self, nodes_menu, id_parent, deep):
+
+        tree_menu = [TreeMenu(module=node.module.id,
+                              id=node.id,
+                              name=node.name,
+                              order=node.order,
+                              parent=node.parent_id,
+                              deep=deep,
+                              sub_menu=self.build_tree_menu(nodes_menu, node.id, deep+1))
+                     for node in nodes_menu if node.parent_id == id_parent]
+
+        return tree_menu
+
+
+'''     def build_tree_menu(self, nodes_menu, id_parent):
         tree_menu = [{'module': node.module.id,
                       'id': node.id,
                       'name': node.name,
@@ -65,7 +82,21 @@ class MenuManager(GenericManager):
                       'sub_menu': self.build_tree_menu(nodes_menu, node.id)}
                      for node in nodes_menu if node.parent_id == id_parent]
 
-        return tree_menu
+        return tree_menu '''
+
+
+@dataclass
+class TreeMenu:
+    id: int
+    module: int
+    name: str
+    order: int
+    parent: int
+    sub_menu: List['TreeMenu']
+    deep: int = 0
+
+    def path(self):
+        return '|---' * self.deep + self.name
 
 
 class Menu(models.Model):
