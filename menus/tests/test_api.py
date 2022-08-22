@@ -172,6 +172,10 @@ class ParametroMenuAPITest(APITestCase):
         return reverse(
             'menus:menu-detail', kwargs={'pk': pk})
 
+    def base_url_detail_tree(self, pk):
+        return reverse(
+            'menus:menu-tree-detail', kwargs={'pk': pk})
+
     def test_url_list(self):
         url_list = '/api/menu/'
         self.assertEqual(self.base_url_list, url_list)
@@ -332,3 +336,58 @@ class ParametroMenuAPITest(APITestCase):
             menus[1], {'name': 'Menu 1'})
         self.assertDictEqual(
             menus[2], {'name': 'Menu 3'})
+
+    def test_url_tree_module(self):
+        url_tree_module = '/api/menu/module/1/'
+        self.assertEqual(self.base_url_detail_tree(pk=1), url_tree_module)
+
+    def test_get__tree_detail_simple_menu(self):
+        module1 = Module.objects.create(name="Module 1")
+
+        #menu1 = {'name': 'Menu 1', 'module': module1.pk}
+        #self.client.post(self.base_url_list, menu1)
+
+        menu1 = Menu.objects.create(name="Menu 1",
+                                    module=module1, parent=None, order=1)
+
+        resp_tree_menu = self.client.get(
+            self.base_url_detail_tree(pk=module1.pk))
+        self.assertEqual(resp_tree_menu.status_code, 200)
+        self.assertEqual(json.loads(resp_tree_menu.content), [{
+                         'pk': menu1.pk, 'name': 'Menu 1', 'module': module1.pk,   'order': 1, 'parent': None, 'deep': 0, 'sub_menu': []}])
+
+    def test_get__tree_detail_menu(self):
+        module1 = Module.objects.create(name="Module 1")
+
+        menu1 = {'name': 'Menu 1', 'module': module1.pk}
+        resp1 = self.client.post(self.base_url_list, menu1)
+
+        menu1_1 = {'name': 'Menu 1.1', 'parent': resp1.data['id']}
+        resp_1_1 = self.client.post(self.base_url_list, menu1_1)
+
+        menu1_2 = {'name': 'Menu 1.1.1', 'parent': resp_1_1.data['id']}
+        resp_1_1_1 = self.client.post(self.base_url_list, menu1_2)
+        menu1_3 = {'name': 'Menu 1.1.2', 'parent': resp_1_1.data['id']}
+        resp_1_1_2 = self.client.post(self.base_url_list, menu1_3)
+
+        resp_tree_menu = self.client.get(
+            self.base_url_detail_tree(pk=module1.pk))
+
+        self.assertEqual(resp_tree_menu.status_code, 200)
+
+        result_exp = [
+            {'pk': 5, 'name': 'Menu 1', 'module': 3, 'order': 1, 'parent': None, 'deep': 0,
+             'sub_menu': [
+                 {'pk': 6, 'name': 'Menu 1.1', 'module': 3, 'order': 1, 'parent': 5, 'deep': 1,
+                  'sub_menu': [
+                      {'pk': 7, 'name': 'Menu 1.1.1', 'module': 3,
+                       'order': 1, 'parent': 6, 'deep': 2, 'sub_menu': []},
+                      {'pk': 8, 'name': 'Menu 1.1.2', 'module': 3,
+                          'order': 2, 'parent': 6, 'deep': 2, 'sub_menu': []}
+                  ]
+                  }
+             ]
+             }
+        ]
+
+        self.assertEqual(json.loads(resp_tree_menu.content), result_exp)

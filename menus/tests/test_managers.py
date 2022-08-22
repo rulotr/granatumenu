@@ -316,15 +316,15 @@ class TestMenuQueries(TestCase):
         module_id = module1.pk
         self.assertEqual(len(tree_menu), 5)
         self.assertEqual(tree1, TreeMenu(
-            id=1, module=module_id, name='Menu 1', order=1, parent=None, sub_menu=[]))
+            pk=1, module=module_id, name='Menu 1', order=1, parent=None, sub_menu=[]))
         self.assertEqual(tree2, TreeMenu(
-            id=2, module=module_id, name='Menu 2', order=2, parent=None, sub_menu=[]))
+            pk=2, module=module_id, name='Menu 2', order=2, parent=None, sub_menu=[]))
         self.assertEqual(tree3, TreeMenu(
-            id=3, module=module_id, name='Menu 3', order=3, parent=None, sub_menu=[]))
+            pk=3, module=module_id, name='Menu 3', order=3, parent=None, sub_menu=[]))
         self.assertEqual(tree4, TreeMenu(
-            id=4, module=module_id, name='Menu 4', order=4, parent=None, sub_menu=[]))
+            pk=4, module=module_id, name='Menu 4', order=4, parent=None, sub_menu=[]))
         self.assertEqual(tree5, TreeMenu(
-            id=5, module=module_id, name='Menu 5', order=5, parent=None, sub_menu=[]))
+            pk=5, module=module_id, name='Menu 5', order=5, parent=None, sub_menu=[]))
 
     def test_get_tree_menu_for_module_with_submenu(self):
         module1 = ModuleFactory()

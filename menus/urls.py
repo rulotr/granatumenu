@@ -8,5 +8,5 @@ urlpatterns = [
     path("modules/<int:pk>/", ModuleDetailApi.as_view(), name='module-detail'),
     path("menu/", MenuListApi.as_view(), name='menu-list'),
     path("menu/<int:pk>/", MenuDetailApi.as_view(), name='menu-detail'),
-
+    path("menu/module/<int:pk>/", MenuDetailApi.as_view(), name='menu-tree-detail'),
 ]

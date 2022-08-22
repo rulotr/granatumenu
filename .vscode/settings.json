@@ -11,9 +11,10 @@
     "python.testing.pytestEnabled": true,
 
     "zenMode.hideLineNumbers": false,
-    
+ 
     "[python]": {
         "editor.codeActionsOnSave": {
             "source.organizeImports": true
         },
+    }
 }

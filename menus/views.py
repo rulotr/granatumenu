@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from yaml import serialize
 
 from menus.models import Menu, Module
-from menus.serializers import MenuSerializer, ModuleSerializer
+from menus.serializers import MenuSerializer, MenuTreeSerializer, ModuleSerializer
 
 # Create your views here.
 
@@ -91,6 +91,11 @@ class MenuListApi(APIView):
 class MenuDetailApi(APIView):
     class MenuPartialSerializer(serializers.Serializer):
         order = serializers.IntegerField()
+
+    def get(self, request, pk):
+        tree_menu = Menu.objects.get_tree_by_module(module=pk)
+        serializer = MenuTreeSerializer(tree_menu, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, pk):
         try:

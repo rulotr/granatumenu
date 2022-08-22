@@ -62,7 +62,7 @@ class MenuManager(GenericManager):
     def build_tree_menu(self, nodes_menu, id_parent, deep):
 
         tree_menu = [TreeMenu(module=node.module.id,
-                              id=node.id,
+                              pk=node.id,
                               name=node.name,
                               order=node.order,
                               parent=node.parent_id,
@@ -73,21 +73,9 @@ class MenuManager(GenericManager):
         return tree_menu
 
 
-'''     def build_tree_menu(self, nodes_menu, id_parent):
-        tree_menu = [{'module': node.module.id,
-                      'id': node.id,
-                      'name': node.name,
-                      'order': node.order,
-                      'parent': node.parent_id,
-                      'sub_menu': self.build_tree_menu(nodes_menu, node.id)}
-                     for node in nodes_menu if node.parent_id == id_parent]
-
-        return tree_menu '''
-
-
 @dataclass
 class TreeMenu:
-    id: int
+    pk: int
     module: int
     name: str
     order: int
