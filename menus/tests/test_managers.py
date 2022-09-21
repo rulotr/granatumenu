@@ -16,31 +16,9 @@ from django.test import SimpleTestCase, TestCase, skipIfDBFeature
 from django_mock_queries.mocks import ModelMocker, mocked_relations
 from django_mock_queries.query import MockModel, MockSet
 
-# My app
 from menus.models import Menu, Module
 from menus.models.menus import TreeMenu
-
-
-class ModuleFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Module
-    name = factory.Sequence(lambda n: 'Module {}'.format(n+1))
-
-
-class MenuFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Menu
-    pk = factory.Sequence(lambda n: n+1)
-    name = factory.Sequence(lambda n: 'Menu {}'.format(n+1))
-    module = factory.LazyAttribute(lambda x: ModuleFactory())
-    parent = None  # factory.LazyAttribute(lambda x: MenuFactory(parent=None))
-    order = factory.Sequence(lambda n: n+1)
-
-    @classmethod
-    def _adjust_kwargs(cls, **kwargs):
-        if kwargs['parent']:
-            kwargs['module'] = kwargs['parent'].module
-        return kwargs
+from menus.tests.factories import MenuFactory, ModuleFactory
 
 
 class TestModuleOperations(TestCase):
@@ -117,26 +95,24 @@ class TestModuleQueries(TestCase):
 
 class TestMenuOperations(TestCase):
 
-    # @patch('menus.models.Menu.objects.next_order_num', return_value=3)
     @patch.object(Menu.objects, 'next_order_num')
     def test_create_menu(self, mock_next_order_num):
-        module1 = Module.objects.create(name="Module 1")
-
-        #mock_next_order_num.return_value = 2
+        module1 = ModuleFactory()
         menu1 = Menu.objects.execute_create(
             name='  Menu 1  ', module=module1)
 
         mock_next_order_num.assert_called()
         self.assertEqual(menu1.name, 'Menu 1')
         self.assertEqual(menu1.module, module1)
-        #self.assertEqual(menu1.order, 3)
-
         self.assertTrue(Menu.objects.count() == 1)
 
     @patch.object(Menu.objects, 'next_order_num')
     def test_create_two_menu_wit_parent_none(self, mock_next_order_num):
-        module1 = Module.objects.create(name="Module 1")
-        MenuFactory(module=module1, order=1, parent=None)
+        module1 = ModuleFactory()
+
+        #MenuFactory(module=module1, order=1, parent=None)
+        Menu.objects.execute_create(
+            name='  Menu 1  ', module=module1)
 
         Menu.objects.execute_create(
             name='  Menu 2  ', module=module1)

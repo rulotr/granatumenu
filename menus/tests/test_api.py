@@ -1,11 +1,13 @@
 import json
 import unittest
+from operator import itemgetter, mod
 # Django
 from re import I
 from socket import IP_RECVDSTADDR
 from urllib import response
 
 import mock
+import pytest
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import (
@@ -17,12 +19,14 @@ from rest_framework.test import (
 
 from menus.models import Menu, Module
 from menus.serializers import MenuSerializer
+from menus.tests.factories import MenuFactory, ModuleFactory
 
 
 class ParametroModuleAPITest(APITestCase):
 
     def setUp(self):
         self.base_url_list = reverse('menus:module-list')
+        ModuleFactory.reset_sequence()
 
     def base_url_detail(self, pk):
         return reverse(
@@ -33,15 +37,14 @@ class ParametroModuleAPITest(APITestCase):
         self.assertEqual(self.base_url_list, url_list)
 
     def test_list_modules(self):
-        module1 = Module.objects.create(name='Module 1')
-        module2 = Module.objects.create(name='Module 2')
+        ModuleFactory.create_batch(2)
 
         resp_modules = self.client.get(self.base_url_list)
         self.assertEqual(resp_modules.status_code, 200)
         self.assertEqual(resp_modules['content-type'], 'application/json')
 
-        modules_expected = [{'id': module1.pk, 'name': 'Module 1'},
-                            {'id': module2.pk, 'name': 'Module 2'}]
+        modules_expected = [{'id': 1, 'name': 'Module 1'},
+                            {'id': 2, 'name': 'Module 2'}]
         self.assertEqual(json.loads(resp_modules.content), modules_expected)
 
     def test_post_modules(self):
@@ -53,7 +56,7 @@ class ParametroModuleAPITest(APITestCase):
         self.assertEqual(Module.objects.count(), 1)
 
     def test_post_module_existent_validation(self):
-        Module.objects.create(name='Module 1')
+        ModuleFactory()
         new_module = {'name': 'module 1'}
         resp_module = self.client.post(
             self.base_url_list, new_module)
@@ -67,8 +70,7 @@ class ParametroModuleAPITest(APITestCase):
     @mock.patch.object(Module, 'full_clean')
     def test_post_module_existent_integrity(self, mock_method):
         mock_method.return_value = ''
-
-        Module.objects.create(name='Module 1')
+        ModuleFactory()
         new_module = {'name': 'Module 1'}
         resp_module = self.client.post(
             self.base_url_list, new_module)
@@ -95,7 +97,7 @@ class ParametroModuleAPITest(APITestCase):
         self.assertEqual(self.base_url_detail(pk=1), url_detail)
 
     def test_put_module(self):
-        new_module = Module.objects.create(name='Module 2')
+        new_module = ModuleFactory(name='Module 2')
         update_module = {'name': 'Module 1'}
         resp_module = self.client.put(
             self.base_url_detail(pk=new_module.pk), update_module)
@@ -105,22 +107,20 @@ class ParametroModuleAPITest(APITestCase):
         self.assertEqual(module.name, 'Module 1')
 
     def test_put_module_module_name_exists(self):
-        module1 = Module.objects.create(name='Module 1')
-        module2 = Module.objects.create(name='Module 2')
+        ModuleFactory.create_batch(2)
 
         update_module = {'name': 'Module 2'}
         resp_module = self.client.put(
-            self.base_url_detail(pk=module1.pk), update_module)
+            self.base_url_detail(pk=1), update_module)
 
-        module = Module.objects.get(pk=module2.pk)
+        module = Module.objects.get(pk=2)
         self.assertEqual(resp_module.status_code, 400)
         self.assertEqual(module.name, 'Module 2')
 
     def test_put_module_name_max_length(self):
-        module1 = Module.objects.create(name='Module 1')
+        module1 = ModuleFactory()
 
         update_module = {'name': 'Module 890123456'}
-
         resp_module = self.client.put(
             self.base_url_detail(pk=module1.pk), update_module)
 
@@ -129,8 +129,7 @@ class ParametroModuleAPITest(APITestCase):
         ), 'Ensure This Field Has No More Than 15 Characters.')
 
     def test_delete_module(self):
-        module1 = Module.objects.create(name='Module 1')
-
+        module1 = ModuleFactory()
         base_url = self.base_url_detail(pk=module1.pk)
         resp_delete = self.client.delete(base_url)
 
@@ -146,8 +145,7 @@ class ParametroModuleAPITest(APITestCase):
                          'message': 'The module with the pk = 9999 doesnt exist'})
 
     def test_get_module_by_id(self):
-        module1 = Module.objects.create(name='Module 1')
-
+        module1 = ModuleFactory()
         base_url = self.base_url_detail(pk=module1.pk)
         resp_get = self.client.get(base_url)
 
@@ -167,6 +165,8 @@ class ParametroMenuAPITest(APITestCase):
 
     def setUp(self):
         self.base_url_list = reverse('menus:menu-list')
+        ModuleFactory.reset_sequence()
+        MenuFactory.reset_sequence()
 
     def base_url_detail(self, pk):
         return reverse(
@@ -188,8 +188,8 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(set(serializer.errors),  {'module'})
 
     def test_menuserializer_valid(self):
-        module1 = Module.objects.create(name="Module 1")
-        data_menu = {'name': 'Menu 1', 'module': module1.pk}
+        ModuleFactory()
+        data_menu = {'name': 'Menu 1', 'module': 1}
 
         serializer = MenuSerializer(data=data_menu)
         self.assertTrue(serializer.is_valid())
@@ -198,9 +198,9 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(data['name'], 'Menu 1')
 
     def test_post_menu(self):
-        module1 = Module.objects.create(name="Module 1")
+        ModuleFactory()
 
-        new_menu = {'name': 'Menu 1', 'module': module1.pk}
+        new_menu = {'name': 'Menu 1', 'module': 1}
 
         resp_module = self.client.post(self.base_url_list, new_menu)
 
@@ -209,7 +209,8 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(Menu.objects.count(), 1)
 
     def test_post_many_menus_same_module(self):
-        module1 = Module.objects.create(name="Module 1")
+
+        module1 = ModuleFactory()
 
         menu1 = {'name': 'Menu 1', 'module': module1.pk}
         menu2 = {'name': 'Menu 2', 'module': module1.pk}
@@ -232,7 +233,8 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(Menu.objects.count(), 3)
 
     def test_post_many_menus_three_levels(self):
-        module1 = Module.objects.create(name="Module 1")
+        module1 = ModuleFactory()
+
         menu1 = {'name': 'Menu 1', 'module': module1.pk}
         resp1 = self.client.post(self.base_url_list, menu1)
 
@@ -261,12 +263,11 @@ class ParametroMenuAPITest(APITestCase):
             menus[3], {'name': 'Menu 1.1.2', 'parent': menu1_2['parent'], 'order': 2})
 
     def test_post_menus_different_module(self):
-        module1 = Module.objects.create(name="Module 1")
-        module2 = Module.objects.create(name="Module 2")
+        ModuleFactory.create_batch(2)
 
-        menu1 = {'name': 'Menu M1', 'module': module1.pk}
+        menu1 = {'name': 'Menu M1', 'module': 1}
         resp1 = self.client.post(self.base_url_list, menu1)
-        menu2 = {'name': 'Menu M2', 'module': module2.pk}
+        menu2 = {'name': 'Menu M2', 'module': 2}
         resp2 = self.client.post(self.base_url_list, menu2)
         menu3 = {'name': 'Menu M2.1', 'parent': resp2.data['id']}
         resp3 = self.client.post(self.base_url_list, menu3)
@@ -275,9 +276,9 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(resp2.status_code, 201)
         self.assertEqual(resp3.status_code, 201)
 
-        self.assertEqual(resp1.data['module'], module1.pk)
-        self.assertEqual(resp2.data['module'], module2.pk)
-        self.assertEqual(resp3.data['module'], module2.pk)
+        self.assertEqual(resp1.data['module'], 1)
+        self.assertEqual(resp2.data['module'], 2)
+        self.assertEqual(resp3.data['module'], 2)
 
     def test_post_menu_not_module(self):
         menu1 = {'name': 'Menu M1', 'module': 1}
@@ -288,7 +289,8 @@ class ParametroMenuAPITest(APITestCase):
         ), 'Invalid Pk "1" - Object Does Not Exist.')
 
     def test_post_menu_max_length(self):
-        module1 = Module.objects.create(name="Module 1")
+        module1 = ModuleFactory()
+
         menu1 = {'name': 'Menu with max length', 'module': module1.pk}
         resp = self.client.post(self.base_url_list, menu1)
 
@@ -301,7 +303,8 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(self.base_url_detail(pk=1), url_detail)
 
     def test_change_name_menu(self):
-        module1 = Module.objects.create(name='Module 1')
+        module1 = ModuleFactory()
+
         menu1 = {'name': 'Menu 1', 'module': module1.pk}
         resp = self.client.post(self.base_url_list, menu1)
 
@@ -314,19 +317,23 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(menu_update.name, 'Menu 1 change')
 
     def test_change_order_menu(self):
-        module1 = Module.objects.create(name="Module 1")
+        module1 = ModuleFactory()
 
-        menu1 = {'name': 'Menu 1', 'module': module1.pk}
-        menu2 = {'name': 'Menu 2', 'module': module1.pk}
-        menu3 = {'name': 'Menu 3', 'module': module1.pk}
+        # menu1 = {'name': 'Menu 1', 'module': module1.pk}
+        # menu2 = {'name': 'Menu 2', 'module': module1.pk}
+        # menu3 = {'name': 'Menu 3', 'module': module1.pk}
 
-        menu1['pk'] = self.client.post(self.base_url_list, menu1).data['id']
-        menu2['pk'] = self.client.post(self.base_url_list, menu2)
-        menu3['pk'] = self.client.post(self.base_url_list, menu3)
+        menu1 = MenuFactory(module=module1, order=1)
+        menu2 = MenuFactory(module=module1, order=2)
+        menu3 = MenuFactory(module=module1, order=3)
+
+        # menu1['pk'] = self.client.post(self.base_url_list, menu1).data['id']
+        # menu2['pk'] = self.client.post(self.base_url_list, menu2)
+        # menu3['pk'] = self.client.post(self.base_url_list, menu3)
 
         change_order = {'order': 2, 'name': 'Change my name'}
         resp_menu = self.client.patch(
-            self.base_url_detail(pk=menu1['pk']), change_order)
+            self.base_url_detail(pk=menu1.pk), change_order)
         self.assertEqual(resp_menu.status_code, 200)
 
         menus = Menu.objects.all().order_by('order').values('name')
@@ -342,13 +349,8 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(self.base_url_detail_tree(pk=1), url_tree_module)
 
     def test_get__tree_detail_simple_menu(self):
-        module1 = Module.objects.create(name="Module 1")
-
-        #menu1 = {'name': 'Menu 1', 'module': module1.pk}
-        #self.client.post(self.base_url_list, menu1)
-
-        menu1 = Menu.objects.create(name="Menu 1",
-                                    module=module1, parent=None, order=1)
+        module1 = ModuleFactory()
+        menu1 = MenuFactory(module=module1, order=1)
 
         resp_tree_menu = self.client.get(
             self.base_url_detail_tree(pk=module1.pk))
@@ -357,18 +359,14 @@ class ParametroMenuAPITest(APITestCase):
                          'pk': menu1.pk, 'name': 'Menu 1', 'module': module1.pk,   'order': 1, 'parent': None, 'deep': 0, 'sub_menu': []}])
 
     def test_get__tree_detail_menu(self):
-        module1 = Module.objects.create(name="Module 1")
-
-        menu1 = {'name': 'Menu 1', 'module': module1.pk}
-        resp1 = self.client.post(self.base_url_list, menu1)
-
-        menu1_1 = {'name': 'Menu 1.1', 'parent': resp1.data['id']}
-        resp_1_1 = self.client.post(self.base_url_list, menu1_1)
-
-        menu1_2 = {'name': 'Menu 1.1.1', 'parent': resp_1_1.data['id']}
-        resp_1_1_1 = self.client.post(self.base_url_list, menu1_2)
-        menu1_3 = {'name': 'Menu 1.1.2', 'parent': resp_1_1.data['id']}
-        resp_1_1_2 = self.client.post(self.base_url_list, menu1_3)
+        module1 = ModuleFactory()
+        menu1 = MenuFactory(module=module1, order=1)
+        menu1_1 = MenuFactory(
+            name='Menu 1.1', module=module1, parent=menu1, order=1)
+        menu1_1_1 = MenuFactory(
+            name='Menu 1.1.1', module=module1, parent=menu1_1, order=1)
+        menu1_1_2 = MenuFactory(
+            name='Menu 1.1.2', module=module1, parent=menu1_1, order=2)
 
         resp_tree_menu = self.client.get(
             self.base_url_detail_tree(pk=module1.pk))
@@ -376,18 +374,34 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(resp_tree_menu.status_code, 200)
 
         result_exp = [
-            {'pk': 5, 'name': 'Menu 1', 'module': 3, 'order': 1, 'parent': None, 'deep': 0,
+            {'pk': menu1.pk, 'name': 'Menu 1', 'module': 1, 'order': 1, 'parent': None, 'deep': 0,
              'sub_menu': [
-                 {'pk': 6, 'name': 'Menu 1.1', 'module': 3, 'order': 1, 'parent': 5, 'deep': 1,
+                 {'pk': menu1_1.pk, 'name': 'Menu 1.1', 'module': 1, 'order': 1, 'parent': menu1.pk, 'deep': 1,
                   'sub_menu': [
-                      {'pk': 7, 'name': 'Menu 1.1.1', 'module': 3,
-                       'order': 1, 'parent': 6, 'deep': 2, 'sub_menu': []},
-                      {'pk': 8, 'name': 'Menu 1.1.2', 'module': 3,
-                          'order': 2, 'parent': 6, 'deep': 2, 'sub_menu': []}
+                      {'pk': menu1_1_1.pk, 'name': 'Menu 1.1.1', 'module': 1,
+                       'order': 1, 'parent': menu1_1.pk, 'deep': 2, 'sub_menu': []},
+                      {'pk': menu1_1_2.pk, 'name': 'Menu 1.1.2', 'module': 1,
+                          'order': 2, 'parent': menu1_1.pk, 'deep': 2, 'sub_menu': []}
                   ]
                   }
              ]
              }
         ]
+
+        json_tree_menu = json.loads(resp_tree_menu.content)
+        self.assertEqual(len(json_tree_menu), 1)
+
+        m1 = json_tree_menu[0]
+        m1_1 = m1.pop('sub_menu')[0]
+        m1_1_1, m1_1_2 = itemgetter(0, 1)(m1_1.pop('sub_menu'))
+
+        self.assertEqual(m1, {'pk': m1['pk'], 'name': 'Menu 1',
+                              'module': 1, 'order': 1, 'deep': 0, 'parent': None})
+        self.assertEqual(m1_1, {'pk': m1_1['pk'], 'name': 'Menu 1.1',
+                         'module': 1, 'order': 1, 'parent': m1['pk'], 'deep': 1})
+        self.assertEqual(m1_1_1, {'pk': m1_1_1['pk'], 'name': 'Menu 1.1.1', 'module': 1,
+                                  'order': 1, 'parent': m1_1['pk'], 'deep': 2, 'sub_menu': []})
+        self.assertEqual(m1_1_2, {'pk': m1_1_2['pk'], 'name': 'Menu 1.1.2', 'module': 1,
+                                  'order': 2, 'parent': m1_1['pk'], 'deep': 2, 'sub_menu': []})
 
         self.assertEqual(json.loads(resp_tree_menu.content), result_exp)
