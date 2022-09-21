@@ -318,18 +318,9 @@ class ParametroMenuAPITest(APITestCase):
 
     def test_change_order_menu(self):
         module1 = ModuleFactory()
-
-        # menu1 = {'name': 'Menu 1', 'module': module1.pk}
-        # menu2 = {'name': 'Menu 2', 'module': module1.pk}
-        # menu3 = {'name': 'Menu 3', 'module': module1.pk}
-
         menu1 = MenuFactory(module=module1, order=1)
         menu2 = MenuFactory(module=module1, order=2)
         menu3 = MenuFactory(module=module1, order=3)
-
-        # menu1['pk'] = self.client.post(self.base_url_list, menu1).data['id']
-        # menu2['pk'] = self.client.post(self.base_url_list, menu2)
-        # menu3['pk'] = self.client.post(self.base_url_list, menu3)
 
         change_order = {'order': 2, 'name': 'Change my name'}
         resp_menu = self.client.patch(
