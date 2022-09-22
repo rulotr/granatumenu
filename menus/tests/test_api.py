@@ -21,19 +21,27 @@ from menus.models import Menu, Module
 from menus.serializers import MenuSerializer
 from menus.tests.factories import MenuFactory, ModuleFactory
 
+URL_MODULES = '/api/modules/'
+URL_MENU = '/api/menu/'
+URL_MODULES_LIST_NAME = 'menus:module-list'
+URL_MODULES_DETAIL_NAME = 'menus:module-detail'
+URL_MENU_LIST_NAME = 'menu-list'
+URL_MENU_DETAIL_NAME = 'menu-detail'
+URL_MENU_TREE_DETAIL_NAME = 'menu-tree-detail'
+
 
 class ParametroModuleAPITest(APITestCase):
 
     def setUp(self):
-        self.base_url_list = reverse('menus:module-list')
+        self.base_url_list = reverse(URL_MODULES_LIST_NAME)
         ModuleFactory.reset_sequence()
 
     def base_url_detail(self, pk):
         return reverse(
-            'menus:module-detail', kwargs={'pk': pk})
+            URL_MODULES_DETAIL_NAME, kwargs={'pk': pk})
 
     def test_url_list(self):
-        url_list = '/api/modules/'
+        url_list = URL_MODULES
         self.assertEqual(self.base_url_list, url_list)
 
     def test_list_modules(self):
@@ -93,7 +101,7 @@ class ParametroModuleAPITest(APITestCase):
         ), 'Ensure This Field Has No More Than 15 Characters.')
 
     def test_url_detail(self):
-        url_detail = '/api/modules/1/'
+        url_detail = URL_MODULES + '1/'
         self.assertEqual(self.base_url_detail(pk=1), url_detail)
 
     def test_put_module(self):
@@ -164,20 +172,20 @@ class ParametroModuleAPITest(APITestCase):
 class ParametroMenuAPITest(APITestCase):
 
     def setUp(self):
-        self.base_url_list = reverse('menus:menu-list')
+        self.base_url_list = reverse(URL_MENU_LIST_NAME)
         ModuleFactory.reset_sequence()
         MenuFactory.reset_sequence()
 
     def base_url_detail(self, pk):
         return reverse(
-            'menus:menu-detail', kwargs={'pk': pk})
+            URL_MENU_DETAIL_NAME, kwargs={'pk': pk})
 
     def base_url_detail_tree(self, pk):
         return reverse(
-            'menus:menu-tree-detail', kwargs={'pk': pk})
+            URL_MENU_TREE_DETAIL_NAME, kwargs={'pk': pk})
 
     def test_url_list(self):
-        url_list = '/api/menu/'
+        url_list = URL_MENU
         self.assertEqual(self.base_url_list, url_list)
 
     def test_menuserializer_invalid(self):
@@ -299,7 +307,7 @@ class ParametroMenuAPITest(APITestCase):
         ), 'Ensure This Field Has No More Than 15 Characters.')
 
     def test_url_detail(self):
-        url_detail = '/api/menu/1/'
+        url_detail = URL_MENU + '1/'
         self.assertEqual(self.base_url_detail(pk=1), url_detail)
 
     def test_change_name_menu(self):
@@ -336,7 +344,7 @@ class ParametroMenuAPITest(APITestCase):
             menus[2], {'name': 'Menu 3'})
 
     def test_url_tree_module(self):
-        url_tree_module = '/api/menu/module/1/'
+        url_tree_module = URL_MENU + 'module/1/'
         self.assertEqual(self.base_url_detail_tree(pk=1), url_tree_module)
 
     def test_get__tree_detail_simple_menu(self):
