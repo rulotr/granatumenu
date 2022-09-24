@@ -10,6 +10,7 @@ import mock
 import pytest
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.exceptions import ErrorDetail
 from rest_framework.test import (
     APIClient,
     APITestCase,
@@ -25,9 +26,9 @@ URL_MODULES = '/api/modules/'
 URL_MENU = '/api/menu/'
 URL_MODULES_LIST_NAME = 'menus:module-list'
 URL_MODULES_DETAIL_NAME = 'menus:module-detail'
-URL_MENU_LIST_NAME = 'menu-list'
-URL_MENU_DETAIL_NAME = 'menu-detail'
-URL_MENU_TREE_DETAIL_NAME = 'menu-tree-detail'
+URL_MENU_LIST_NAME = 'menus:menu-list'
+URL_MENU_DETAIL_NAME = 'menus:menu-detail'
+URL_MENU_TREE_DETAIL_NAME = 'menus:menu-tree-detail'
 
 
 class ParametroModuleAPITest(APITestCase):
@@ -165,8 +166,8 @@ class ParametroModuleAPITest(APITestCase):
         resp_get = self.client.get(base_url)
 
         self.assertEqual(resp_get.status_code, 404)
-        self.assertEqual(resp_get.data,  {
-                         'message': 'The module with the pk = 9999 doesnt exist'})
+        self.assertEqual(resp_get.data,
+                         {'detail': ErrorDetail(string='Not found.', code='not_found')})
 
 
 class ParametroMenuAPITest(APITestCase):

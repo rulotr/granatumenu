@@ -7,7 +7,10 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.shortcuts import render
 from rest_framework import serializers, status
+from rest_framework.generics import GenericAPIView, RetrieveAPIView
+from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 from yaml import serialize
 
@@ -17,36 +20,39 @@ from menus.serializers import MenuSerializer, MenuTreeSerializer, ModuleSerializ
 # Create your views here.
 
 
-class ModuleListApi(APIView):
-    def get(self, request):
-        modules = Module.objects.get_all()
-        serializer = ModuleSerializer(modules, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+class CreateModelMixinCustom(CreateModelMixin):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer = self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-    def post(self, request):
-        try:
-            serializer = ModuleSerializer(data=request.data)
-            if serializer.is_valid():
-                new_module = Module.objects.execute_create(
-                    **serializer.validated_data)
-                resp_seri = ModuleSerializer(new_module)
-                return Response(resp_seri.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except ValidationError as e:
-            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
-        except IntegrityError as e:
-            return Response({'message': e.args[0]}, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        new_module = self.model_operations.objects.execute_create(
+            **serializer.validated_data)
+        serializer = self.get_serializer(new_module)
+        return serializer
 
 
-class ModuleDetailApi(APIView):
-    def get(self, request, pk):
-        try:
-            module = Module.objects.find_by_pk(pk)
-            serializer = ModuleSerializer(module)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Module.DoesNotExist as e:
-            return Response({'message': e.args[0]}, status=status.HTTP_404_NOT_FOUND)
+class ModuleListApi(CreateModelMixinCustom, ListModelMixin, GenericAPIView):
+    queryset = Module.objects.all()
+    serializer_class = ModuleSerializer
+    model_operations = Module
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+
+class ModuleDetailApi(RetrieveAPIView, GenericAPIView):
+    queryset = Module.objects.all()
+    serializer_class = ModuleSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(self, request, *args, **kwargs)
 
     def put(self, request, pk):
         try:

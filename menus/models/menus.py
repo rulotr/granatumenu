@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List
 
@@ -11,7 +12,13 @@ from menus.models.custom_fields import CharFieldTrim
 from menus.models.custom_managers import GenericManager
 
 
-class MenuManager(GenericManager):
+class GenericOperationsABC(ABC):
+    @abstractmethod
+    def execute_create(self, name, module, parent):
+        pass
+
+
+class MenuManager(GenericOperationsABC, GenericManager):
     def execute_create(self, name, module=None, parent=None):
         if parent:
             module = parent.module
