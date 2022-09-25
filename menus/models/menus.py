@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from ast import arg
 from dataclasses import dataclass
 from typing import List
 
@@ -12,13 +13,7 @@ from menus.models.custom_fields import CharFieldTrim
 from menus.models.custom_managers import GenericManager
 
 
-class GenericOperationsABC(ABC):
-    @abstractmethod
-    def execute_create(self, name, module, parent):
-        pass
-
-
-class MenuManager(GenericOperationsABC, GenericManager):
+class MenuManager(GenericManager):
     def execute_create(self, name, module=None, parent=None):
         if parent:
             module = parent.module
@@ -37,8 +32,14 @@ class MenuManager(GenericOperationsABC, GenericManager):
         menu.save(update_fields=['name'])
         return menu
 
-    def execute_partial_update(self, pk, order):
+    def execute_partial_update(self, *args, **kwargs):
+        pk = kwargs['pk']
+        order = kwargs['order']
         self.change_order_to(pk=pk, new_order=order)
+
+    def execute_retrieve(self, *args, **kwargs):
+        module = kwargs['pk']
+        return self.get_tree_by_module(module)
 
     def next_order_num(self, module=None, parent=None):
         if parent:
@@ -63,7 +64,6 @@ class MenuManager(GenericOperationsABC, GenericManager):
         nodes_menu = sorted(nodes_menu, key=lambda x: x.order)
 
         tree_menu = self.build_tree_menu(nodes_menu, None, 0)
-
         return tree_menu
 
     def build_tree_menu(self, nodes_menu, id_parent, deep):

@@ -1,14 +1,21 @@
 from ipaddress import ip_address
 from os import stat
 from socket import IP_ADD_MEMBERSHIP
+from urllib import request
 from xml.dom import ValidationErr
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError
 from django.shortcuts import render
 from rest_framework import serializers, status
-from rest_framework.generics import GenericAPIView, RetrieveAPIView
-from rest_framework.mixins import CreateModelMixin, ListModelMixin
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import (
+    CreateModelMixin,
+    DestroyModelMixin,
+    ListModelMixin,
+    RetrieveModelMixin,
+    UpdateModelMixin,
+)
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.views import APIView
@@ -18,6 +25,14 @@ from menus.models import Menu, Module
 from menus.serializers import MenuSerializer, MenuTreeSerializer, ModuleSerializer
 
 # Create your views here.
+
+
+class RetrieveModelMixinCustom(RetrieveModelMixin):
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.model_operations.objects.execute_retrieve(
+            *args, **kwargs)
+        serializer = self.get_serializer(instance, many=True)
+        return Response(serializer.data)
 
 
 class CreateModelMixinCustom(CreateModelMixin):
@@ -35,6 +50,58 @@ class CreateModelMixinCustom(CreateModelMixin):
         return serializer
 
 
+class UpdateModelMixinCustom(UpdateModelMixin):
+    def perform_update(self, pk, serializer):
+        list_method_update = {
+            'PUT': self.model_operations.objects.execute_update,
+            'PATCH': self.model_operations.objects.execute_partial_update
+        }
+
+        method_update = list_method_update[self.request.method]
+
+        update_module = method_update(pk=pk, **serializer.validated_data)
+        serializer = self.get_serializer(update_module)
+        return serializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+
+        assert 'pk' in kwargs, (
+            'Expected view %s to be called with a URL keyword argument '
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            'attribute on the view correctly.' %
+            (self.__class__.__name__, 'pk')
+        )
+
+        pk = kwargs['pk']
+        serializer = self.get_serializer(data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer = self.perform_update(pk, serializer)
+
+        return Response(serializer.data)
+
+
+class DestroyModelMixinCustom(DestroyModelMixin):
+    def destroy(self, request, *args, **kwargs):
+        assert 'pk' in kwargs, (
+            'Expected view %s to be called with a URL keyword argument '
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            'attribute on the view correctly.' %
+            (self.__class__.__name__, 'pk')
+        )
+
+        pk = kwargs['pk']
+
+        try:
+            self.perform_destroy(pk)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ObjectDoesNotExist as e:
+            return Response({'message': e.args[0]}, status=status.HTTP_404_NOT_FOUND)
+
+    def perform_destroy(self, pk):
+        self.model_operations.objects.execute_delete(pk)
+
+
 class ModuleListApi(CreateModelMixinCustom, ListModelMixin, GenericAPIView):
     queryset = Module.objects.all()
     serializer_class = ModuleSerializer
@@ -47,77 +114,46 @@ class ModuleListApi(CreateModelMixinCustom, ListModelMixin, GenericAPIView):
         return self.create(request, *args, **kwargs)
 
 
-class ModuleDetailApi(RetrieveAPIView, GenericAPIView):
+class ModuleDetailApi(RetrieveModelMixin, UpdateModelMixinCustom, DestroyModelMixinCustom, GenericAPIView):
     queryset = Module.objects.all()
     serializer_class = ModuleSerializer
+    model_operations = Module
 
     def get(self, request, *args, **kwargs):
-        return self.retrieve(self, request, *args, **kwargs)
+        return self.retrieve(request, *args, **kwargs)
 
-    def put(self, request, pk):
-        try:
-            serializer = ModuleSerializer(data=request.data)
-            if serializer.is_valid():
-                update_module = Module.objects.execute_update(
-                    pk, **serializer.validated_data)
-                resp_module = ModuleSerializer(update_module)
-                return Response(resp_module.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except ValidationError as e:
-            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
-        except IntegrityError as e:
-            return Response({'message': e.args[0]}, status=status.HTTP_400_BAD_REQUEST)
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
 
-    def delete(self, request, pk):
-        try:
-            Module.objects.execute_delete(pk=pk)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Module.DoesNotExist as e:
-            return Response({'message': e.args[0]}, status=status.HTTP_404_NOT_FOUND)
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
 
 
-class MenuListApi(APIView):
-    def post(self, request):
-        try:
-            serializer = MenuSerializer(data=request.data)
-            if serializer.is_valid():
-                new_module = Menu.objects.execute_create(
-                    **serializer.validated_data)
-                resp_seri = MenuSerializer(new_module)
-                return Response(resp_seri.data, status=status.HTTP_201_CREATED)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except ValidationError as e:
-            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
-        except IntegrityError as e:
-            return Response({'message': e.args[0]}, status=status.HTTP_400_BAD_REQUEST)
+class MenuListApi(CreateModelMixinCustom, GenericAPIView):
+    queryset = Menu.objects.all()
+    serializer_class = MenuSerializer
+    model_operations = Menu
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
 
 
-class MenuDetailApi(APIView):
-    class MenuPartialSerializer(serializers.Serializer):
-        order = serializers.IntegerField()
+class MenuDetailApi(RetrieveModelMixinCustom, UpdateModelMixinCustom, GenericAPIView):
+    queryset = Menu.objects.all()
+    serializer_class = MenuSerializer
+    serializer_classes = {
+        'GET': MenuTreeSerializer
+    }
+    model_operations = Menu
 
-    def get(self, request, pk):
-        tree_menu = Menu.objects.get_tree_by_module(module=pk)
-        serializer = MenuTreeSerializer(tree_menu, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_serializer_class(self):
+        return self.serializer_classes.get(self.request.method, self.serializer_class)
 
-    def put(self, request, pk):
-        try:
-            serializer = MenuSerializer(data=request.data)
-            if serializer.is_valid():
-                update_menu = Menu.objects.execute_update(
-                    pk, **serializer.validated_data)
-                resp_menu = MenuSerializer(update_menu)
-                return Response(resp_menu.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except ValidationError as e:
-            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request,  *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
 
-    def patch(self, request, pk):
-        serializer = self.MenuPartialSerializer(data=request.data)
-        serializer.is_valid()
-        Menu.objects.execute_partial_update(pk, **serializer.validated_data)
-        return Response(request.data, status=status.HTTP_200_OK)
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
