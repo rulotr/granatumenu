@@ -6,6 +6,7 @@ from xml.dom import ValidationErr
 
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import render
 from rest_framework import serializers, status
 from rest_framework.generics import GenericAPIView
@@ -97,6 +98,8 @@ class DestroyModelMixinCustom(DestroyModelMixin):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except ObjectDoesNotExist as e:
             return Response({'message': e.args[0]}, status=status.HTTP_404_NOT_FOUND)
+        except ProtectedError as e:
+            return Response({'message': e.args[0]}, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_destroy(self, pk):
         self.model_operations.objects.execute_delete(pk)
@@ -138,7 +141,7 @@ class MenuListApi(CreateModelMixinCustom, GenericAPIView):
         return self.create(request, *args, **kwargs)
 
 
-class MenuDetailApi(RetrieveModelMixinCustom, UpdateModelMixinCustom, GenericAPIView):
+class MenuDetailApi(RetrieveModelMixinCustom, UpdateModelMixinCustom, DestroyModelMixinCustom, GenericAPIView):
     queryset = Menu.objects.all()
     serializer_class = MenuSerializer
     serializer_classes = {
@@ -157,3 +160,6 @@ class MenuDetailApi(RetrieveModelMixinCustom, UpdateModelMixinCustom, GenericAPI
 
     def patch(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)

@@ -25,6 +25,10 @@ class MenuManager(GenericManager):
         menu.save()
         return menu
 
+    def execute_delete(self, pk):
+        menu = self.find_by_pk(pk)
+        menu.delete()
+
     def execute_update(self, pk, name):
         menu = self.find_by_pk(pk)
         menu.name = name

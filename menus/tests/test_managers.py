@@ -12,6 +12,7 @@ import pytest
 from django.core import exceptions
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, connection, transaction
+from django.db.models.deletion import ProtectedError
 from django.test import SimpleTestCase, TestCase, skipIfDBFeature
 from django_mock_queries.mocks import ModelMocker, mocked_relations
 from django_mock_queries.query import MockModel, MockSet
@@ -150,6 +151,25 @@ class TestMenuOperations(TestCase):
 
         self.assertEqual(menu1.name, 'Menu 1')
         self.assertEqual(menu2.name, 'Menu 1')
+
+        self.assertTrue(Menu.objects.count() == 2)
+
+    def test_delete_menu(self):
+        module1 = ModuleFactory()
+        menu1 = MenuFactory(module=module1, order=1)
+
+        Menu.objects.execute_delete(pk=menu1.pk)
+        self.assertTrue(Menu.objects.count() == 0)
+
+    def test_delete_menu_with_submenu(self):
+        module1 = ModuleFactory()
+
+        menu1 = MenuFactory(module=module1, order=1)
+        menu1_1 = MenuFactory(
+            name='Menu 1.1', module=module1, parent=menu1, order=1)
+
+        with self.assertRaisesMessage(ProtectedError, '("Cannot delete some instances of model \'Menu\' because they are referenced through protected foreign keys: \'Menu.parent\'.", {<Menu: Menu object (9)>})'):
+            Menu.objects.execute_delete(pk=menu1.pk)
 
         self.assertTrue(Menu.objects.count() == 2)
 

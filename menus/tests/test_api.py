@@ -311,6 +311,30 @@ class ParametroMenuAPITest(APITestCase):
         url_detail = URL_MENU + '1/'
         self.assertEqual(self.base_url_detail(pk=1), url_detail)
 
+    def test_delete_menu(self):
+        module1 = ModuleFactory()
+        menu1 = MenuFactory(module=module1, order=1)
+
+        base_url = self.base_url_detail(pk=menu1.pk)
+        resp_delete = self.client.delete(base_url)
+
+        self.assertEqual(resp_delete.status_code, 204)
+        self.assertEqual(Menu.objects.all().count(), 0)
+
+    def test_delete_menu_with_submenu(self):
+        module1 = ModuleFactory()
+        menu1 = MenuFactory(module=module1, order=1)
+        menu1_1 = MenuFactory(
+            name='Menu 1.1', module=module1, parent=menu1, order=1)
+
+        base_url = self.base_url_detail(pk=menu1.pk)
+        resp_delete = self.client.delete(base_url)
+
+        self.assertEqual(resp_delete.status_code, 400)
+        self.assertEqual(Menu.objects.all().count(), 2)
+        self.assertEqual(
+            resp_delete.data['message'], "Cannot delete some instances of model 'Menu' because they are referenced through protected foreign keys: 'Menu.parent'.")
+
     def test_change_name_menu(self):
         module1 = ModuleFactory()
 
@@ -318,11 +342,11 @@ class ParametroMenuAPITest(APITestCase):
         resp = self.client.post(self.base_url_list, menu1)
 
         update_menu = {'name': 'Menu 1 Change'}
-        resp_memu = self.client.put(
+        resp_menu = self.client.put(
             self.base_url_detail(pk=resp.data['id']), update_menu)
         menu_update = Menu.objects.all().first()
 
-        self.assertEqual(resp_memu.status_code, 200)
+        self.assertEqual(resp_menu.status_code, 200)
         self.assertEqual(menu_update.name, 'Menu 1 change')
 
     def test_change_order_menu(self):
