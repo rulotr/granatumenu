@@ -83,6 +83,35 @@ class MenuManager(GenericManager):
 
         return tree_menu
 
+    def build_tree_menu2(self, nodes_menu, id_parent, deep):
+
+        tree_menu = [TreeMenu(module=node.module.id,
+                              pk=node.id,
+                              name=node.name,
+                              order=node.order,
+                              parent=node.parent_id,
+                              deep=deep,
+                              sub_menu=self.build_tree_menu(nodes_menu, node.id, deep+1))
+                     for node in nodes_menu if node.parent_id == id_parent]
+
+        return tree_menu
+
+    def get_tree_complete(self):
+        nodes_menu = self.all()
+        nodes_module = {}
+
+        for node in nodes_menu:
+            key = node.module.id
+            nodes_module[key] = nodes_module.get(key, []) + [node]
+
+        lista_menus = []
+        for llave in nodes_module:
+            order_menus = sorted(nodes_module[llave], key=lambda x: x.order)
+            tree_menu = self.build_tree_menu2(order_menus, None, 0)
+            lista_menus.append(TreeModule(module=llave, menus=tree_menu))
+
+        return lista_menus
+
 
 @dataclass
 class TreeMenu:
@@ -96,6 +125,12 @@ class TreeMenu:
 
     def path(self):
         return '|---' * self.deep + self.name
+
+
+@dataclass
+class TreeModule:
+    module: int
+    menus: List[TreeMenu]
 
 
 class Menu(models.Model):
