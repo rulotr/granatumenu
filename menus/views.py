@@ -23,9 +23,38 @@ from rest_framework.views import APIView
 from yaml import serialize
 
 from menus.models import Menu, Module
-from menus.serializers import MenuSerializer, MenuTreeSerializer, ModuleSerializer
+from menus.serializers import (
+    ItemTreeSerializer,
+    MenuSerializer,
+    MenuTreeSerializer,
+    ModuleSerializer,
+)
 
 # Create your views here.
+
+
+class ListModelMixinCustom:
+    """
+    List a queryset.
+    """
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        result_list = self.perform_list(queryset)
+        serializer = self.get_serializer(result_list, many=True)
+
+        return Response(serializer.data)
+
+    def perform_list(self, queryset):
+        return queryset
+
+# Arreglar este para que sea generico
 
 
 class RetrieveModelMixinCustom(RetrieveModelMixin):
@@ -105,7 +134,7 @@ class DestroyModelMixinCustom(DestroyModelMixin):
         self.model_operations.objects.execute_delete(pk)
 
 
-class ModuleListApi(CreateModelMixinCustom, ListModelMixin, GenericAPIView):
+class ModuleListApi(CreateModelMixinCustom, ListModelMixinCustom, GenericAPIView):
     queryset = Module.objects.all()
     serializer_class = ModuleSerializer
     model_operations = Module
@@ -132,10 +161,24 @@ class ModuleDetailApi(RetrieveModelMixin, UpdateModelMixinCustom, DestroyModelMi
         return self.destroy(request, *args, **kwargs)
 
 
-class MenuListApi(CreateModelMixinCustom, GenericAPIView):
+class MenuListApi(CreateModelMixinCustom, ListModelMixinCustom, GenericAPIView):
     queryset = Menu.objects.all()
     serializer_class = MenuSerializer
     model_operations = Menu
+
+    serializer_classes = {
+        'GET': MenuTreeSerializer
+    }
+    model_operations = Menu
+
+    def get_serializer_class(self):
+        return self.serializer_classes.get(self.request.method, self.serializer_class)
+
+    def perform_list(self, queryset):
+        return Menu.objects.execute_list(queryset)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -145,7 +188,7 @@ class MenuDetailApi(RetrieveModelMixinCustom, UpdateModelMixinCustom, DestroyMod
     queryset = Menu.objects.all()
     serializer_class = MenuSerializer
     serializer_classes = {
-        'GET': MenuTreeSerializer
+        'GET': ItemTreeSerializer
     }
     model_operations = Menu
 

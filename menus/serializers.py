@@ -17,7 +17,7 @@ class MenuSerializer(serializers.ModelSerializer):
         extra_kwargs = {"module": {"required": False, "allow_null": True}}
 
 
-class MenuTreeSerializer(serializers.Serializer):
+class ItemTreeSerializer(serializers.Serializer):
     pk = serializers.IntegerField()
     name = serializers.CharField()
     module = serializers.IntegerField()
@@ -26,17 +26,13 @@ class MenuTreeSerializer(serializers.Serializer):
     deep = serializers.IntegerField()
     sub_menu = serializers.SerializerMethodField()
 
-    # class Meta:
-    #    model = Menu
-    #    fields = ('pk', 'name', 'module', 'order',
-    #              'parent',  'deep')
-
-    # def to_representation(self, instance):
-    #     self.fields['sub_menu'] = MenuTreeSerializer(many=True, read_only=True)
-    #     return super(MenuTreeSerializer, self).to_representation(instance)
-
     def get_sub_menu(self, obj):
         if obj.sub_menu is not None:
-            return MenuTreeSerializer(obj.sub_menu, many=True).data
+            return ItemTreeSerializer(obj.sub_menu, many=True).data
         else:
             return None
+
+
+class MenuTreeSerializer(serializers.Serializer):
+    module = serializers.IntegerField()
+    menus = ItemTreeSerializer(many=True)

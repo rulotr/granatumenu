@@ -206,6 +206,80 @@ class ParametroMenuAPITest(APITestCase):
         self.assertCountEqual(data.keys(), ['name', 'module', 'parent'])
         self.assertEqual(data['name'], 'Menu 1')
 
+    def test_list_tree_menu_simple(self):
+        module1 = ModuleFactory()
+        MenuFactory.reset_sequence(0)
+        menu1 = MenuFactory(module=module1, order=1)
+
+        resp_tree_menu = self.client.get(self.base_url_list)
+
+        self.assertEqual(resp_tree_menu.status_code, 200)
+
+        result_exp = [
+            {'module': 1,
+             'menus': [
+                 {'pk': 1, 'name': 'Menu 1', 'module': 1, 'order': 1,
+                  'parent': None, 'deep': 0, 'sub_menu': []}
+             ]
+             }]
+
+        json_tree_menu = json.loads(resp_tree_menu.content)
+        self.assertEqual(len(json_tree_menu), 1)
+        self.assertEqual(json_tree_menu, result_exp)
+
+    def test_list_tree_two_modules(self):
+        module1 = ModuleFactory()
+        module2 = ModuleFactory()
+
+        MenuFactory.reset_sequence(0)
+        menu1 = MenuFactory(module=module1, order=2)
+        menu2 = MenuFactory(module=module1, order=1)
+
+        menu1_1 = MenuFactory(parent=menu1, order=1)
+        menu1_2 = MenuFactory(parent=menu1, order=2)
+        menu2_1 = MenuFactory(parent=menu2, order=1)
+
+        m2_menu1 = MenuFactory(module=module2, order=1)
+
+        menu1_1_1 = MenuFactory(parent=menu1_1, order=1)
+
+        resp_tree_menu = self.client.get(self.base_url_list)
+
+        self.assertEqual(resp_tree_menu.status_code, 200)
+
+        result_exp = [
+            {'module': 1,
+             'menus': [
+                 {'pk': 2, 'name': 'Menu 2', 'module': 1, 'order': 1, 'parent': None, 'deep': 0,
+                  'sub_menu': [
+                      {'pk': 5, 'name': 'Menu 5', 'module': 1, 'order': 1,
+                       'parent': 2, 'deep': 1, 'sub_menu': []}
+                  ]},
+                 {'pk': 1, 'name': 'Menu 1', 'module': 1, 'order': 2, 'parent': None, 'deep': 0,
+                  'sub_menu': [
+                      {'pk': 3, 'name': 'Menu 3', 'module': 1, 'order': 1, 'parent': 1, 'deep': 1,
+                       'sub_menu': [
+                                {'pk': 7, 'name': 'Menu 7', 'module': 1, 'order': 1,
+                                    'parent': 3, 'deep': 2, 'sub_menu': []}
+                       ]
+                       },
+                      {'pk': 4, 'name': 'Menu 4', 'module': 1, 'order': 2,
+                       'parent': 1, 'deep': 1, 'sub_menu': []}
+                  ]
+                  }]
+             },
+            {'module': 2,
+             'menus': [
+                 {'pk': 6, 'name': 'Menu 6', 'module': 2, 'order': 1,
+                  'parent': None, 'deep': 0, 'sub_menu': []}
+             ]
+             }
+        ]
+
+        json_tree_menu = json.loads(resp_tree_menu.content)
+        self.assertEqual(len(json_tree_menu), 2)
+        self.assertEqual(json_tree_menu, result_exp)
+
     def test_post_menu(self):
         ModuleFactory()
 

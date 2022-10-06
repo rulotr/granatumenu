@@ -14,6 +14,10 @@ from menus.models.custom_managers import GenericManager
 
 
 class MenuManager(GenericManager):
+    def execute_list(self, queryset):
+        tree_menu = self.get_tree_complete(queryset)
+        return tree_menu
+
     def execute_create(self, name, module=None, parent=None):
         if parent:
             module = parent.module
@@ -96,8 +100,8 @@ class MenuManager(GenericManager):
 
         return tree_menu
 
-    def get_tree_complete(self):
-        nodes_menu = self.all()
+    def get_tree_complete(self, queryset):
+        nodes_menu = queryset
         nodes_module = {}
 
         for node in nodes_menu:

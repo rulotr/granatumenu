@@ -363,9 +363,9 @@ class TestMenuQueries(TestCase):
         MenuFactory.create_batch(5, module=module1, parent=None)
         MenuFactory.create_batch(2, module=module2, parent=None)
 
-        tres_menu_complete = Menu.objects.get_tree_complete()
+        queryset = Menu.objects.all()
 
-        tree_menu = Menu.objects.get_tree_complete()
+        tree_menu = Menu.objects.get_tree_complete(queryset)
         module1_menu, module2_menu = tree_menu
 
         self.assertEqual(len(tree_menu), 2)
@@ -405,7 +405,8 @@ class TestMenuQueries(TestCase):
 
         menu1_1_1 = MenuFactory(parent=menu1_1, order=1)
 
-        tree_menu = Menu.objects.get_tree_complete()
+        queryset = Menu.objects.all()
+        tree_menu = Menu.objects.get_tree_complete(queryset)
         module1_menu, module2_menu = tree_menu
 
         tree1, tree2 = module1_menu.menus
