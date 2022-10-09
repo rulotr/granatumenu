@@ -62,9 +62,8 @@ class ListModelMixinCustom:
 
 class RetrieveModelMixinCustom(RetrieveModelMixin):
     def retrieve(self, request, *args, **kwargs):
-        instance = self.model_operations.objects.execute_retrieve(
-            *args, **kwargs)
-        serializer = self.get_serializer(instance, many=True)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
 
@@ -81,14 +80,6 @@ class CreateModelMixinCustom(CreateModelMixin):
             **serializer.validated_data)
         serializer = self.get_serializer(new_module)
         return serializer
-
-    # def get_serializer_class(self):
-    #     import ipdb
-    #     ipdb.set_trace()
-    #     serializer = self.dict_serializer_classes.get(
-    #         self.request.method, self.serializer_class)
-
-    #     return serializer
 
 
 class UpdateModelMixinCustom(UpdateModelMixin):
@@ -174,7 +165,6 @@ class ModuleDetailApi(RetrieveModelMixin, UpdateModelMixinCustom, DestroyModelMi
 
 class MenuListApi(CreateModelMixinCustom, ListModelMixinCustom, GenericAPIView):
     queryset = Menu.objects.all()
-    #serializer_class = MenuSerializer
     model_operations = Menu
 
     dict_serializer_classes = {
@@ -202,13 +192,7 @@ class MenuListApi(CreateModelMixinCustom, ListModelMixinCustom, GenericAPIView):
 class MenuDetailApi(RetrieveModelMixinCustom, UpdateModelMixinCustom, DestroyModelMixinCustom, GenericAPIView):
     queryset = Menu.objects.all()
     serializer_class = MenuSerializer
-    serializer_classes = {
-        'GET': ItemTreeSerializer
-    }
     model_operations = Menu
-
-    def get_serializer_class(self):
-        return self.serializer_classes.get(self.request.method, self.serializer_class)
 
     def get(self, request,  *args, **kwargs):
         return self.retrieve(request, *args, **kwargs)

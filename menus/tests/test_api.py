@@ -28,7 +28,6 @@ URL_MODULES_LIST_NAME = 'menus:module-list'
 URL_MODULES_DETAIL_NAME = 'menus:module-detail'
 URL_MENU_LIST_NAME = 'menus:menu-list'
 URL_MENU_DETAIL_NAME = 'menus:menu-detail'
-URL_MENU_TREE_DETAIL_NAME = 'menus:menu-tree-detail'
 
 
 class ParametroModuleAPITest(APITestCase):
@@ -180,10 +179,6 @@ class ParametroMenuAPITest(APITestCase):
     def base_url_detail(self, pk):
         return reverse(
             URL_MENU_DETAIL_NAME, kwargs={'pk': pk})
-
-    def base_url_detail_tree(self, pk):
-        return reverse(
-            URL_MENU_TREE_DETAIL_NAME, kwargs={'pk': pk})
 
     def test_url_list(self):
         url_list = URL_MENU
@@ -442,64 +437,28 @@ class ParametroMenuAPITest(APITestCase):
         self.assertDictEqual(
             menus[2], {'name': 'Menu 3'})
 
-    def test_url_tree_module(self):
-        url_tree_module = URL_MENU + 'module/1/'
-        self.assertEqual(self.base_url_detail_tree(pk=1), url_tree_module)
-
-    def test_get__tree_detail_simple_menu(self):
+    def test_get_simple_menu(self):
         module1 = ModuleFactory()
         menu1 = MenuFactory(module=module1, order=1)
 
-        resp_tree_menu = self.client.get(
-            self.base_url_detail_tree(pk=module1.pk))
-        self.assertEqual(resp_tree_menu.status_code, 200)
-        self.assertEqual(json.loads(resp_tree_menu.content), [{
-                         'pk': menu1.pk, 'name': 'Menu 1', 'module': module1.pk,   'order': 1, 'parent': None, 'deep': 0, 'sub_menu': []}])
+        base_url = self.base_url_detail(pk=menu1.pk)
 
-    def test_get__tree_detail_menu(self):
+        resp_tree_menu = self.client.get(base_url)
+
+        self.assertEqual(resp_tree_menu.status_code, 200)
+        self.assertEqual(resp_tree_menu.data, {
+                         'id': menu1.pk, 'name': 'Menu 1', 'module': module1.pk, 'parent': None, 'order': 1})
+
+    def test_get_menu_with_parent(self):
         module1 = ModuleFactory()
         menu1 = MenuFactory(module=module1, order=1)
         menu1_1 = MenuFactory(
             name='Menu 1.1', module=module1, parent=menu1, order=1)
-        menu1_1_1 = MenuFactory(
-            name='Menu 1.1.1', module=module1, parent=menu1_1, order=1)
-        menu1_1_2 = MenuFactory(
-            name='Menu 1.1.2', module=module1, parent=menu1_1, order=2)
 
-        resp_tree_menu = self.client.get(
-            self.base_url_detail_tree(pk=module1.pk))
+        base_url = self.base_url_detail(pk=menu1_1.pk)
+
+        resp_tree_menu = self.client.get(base_url)
 
         self.assertEqual(resp_tree_menu.status_code, 200)
-
-        result_exp = [
-            {'pk': menu1.pk, 'name': 'Menu 1', 'module': 1, 'order': 1, 'parent': None, 'deep': 0,
-             'sub_menu': [
-                 {'pk': menu1_1.pk, 'name': 'Menu 1.1', 'module': 1, 'order': 1, 'parent': menu1.pk, 'deep': 1,
-                  'sub_menu': [
-                      {'pk': menu1_1_1.pk, 'name': 'Menu 1.1.1', 'module': 1,
-                       'order': 1, 'parent': menu1_1.pk, 'deep': 2, 'sub_menu': []},
-                      {'pk': menu1_1_2.pk, 'name': 'Menu 1.1.2', 'module': 1,
-                          'order': 2, 'parent': menu1_1.pk, 'deep': 2, 'sub_menu': []}
-                  ]
-                  }
-             ]
-             }
-        ]
-
-        json_tree_menu = json.loads(resp_tree_menu.content)
-        self.assertEqual(len(json_tree_menu), 1)
-
-        m1 = json_tree_menu[0]
-        m1_1 = m1.pop('sub_menu')[0]
-        m1_1_1, m1_1_2 = itemgetter(0, 1)(m1_1.pop('sub_menu'))
-
-        self.assertEqual(m1, {'pk': m1['pk'], 'name': 'Menu 1',
-                              'module': 1, 'order': 1, 'deep': 0, 'parent': None})
-        self.assertEqual(m1_1, {'pk': m1_1['pk'], 'name': 'Menu 1.1',
-                         'module': 1, 'order': 1, 'parent': m1['pk'], 'deep': 1})
-        self.assertEqual(m1_1_1, {'pk': m1_1_1['pk'], 'name': 'Menu 1.1.1', 'module': 1,
-                                  'order': 1, 'parent': m1_1['pk'], 'deep': 2, 'sub_menu': []})
-        self.assertEqual(m1_1_2, {'pk': m1_1_2['pk'], 'name': 'Menu 1.1.2', 'module': 1,
-                                  'order': 2, 'parent': m1_1['pk'], 'deep': 2, 'sub_menu': []})
-
-        self.assertEqual(json.loads(resp_tree_menu.content), result_exp)
+        self.assertEqual(resp_tree_menu.data, {
+                         'id': menu1_1.pk, 'name': 'Menu 1.1', 'module': module1.pk, 'parent': menu1.pk, 'order': 1})

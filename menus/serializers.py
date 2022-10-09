@@ -13,7 +13,7 @@ class ModuleSerializer(serializers.ModelSerializer):
 class MenuSerializer(serializers.ModelSerializer):
     class Meta:
         model = Menu
-        fields = ('id', 'name', 'module', 'parent', 'order')
+        fields = ('id', 'name', 'module', 'parent', 'order',)
         extra_kwargs = {"module": {"required": False, "allow_null": True}}
 
 
