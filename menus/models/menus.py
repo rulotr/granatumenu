@@ -14,9 +14,6 @@ from menus.models.custom_managers import GenericManager
 
 
 class MenuManager(GenericManager):
-    def execute_list(self, queryset):
-        tree_menu = self.get_tree_complete(queryset)
-        return tree_menu
 
     def execute_create(self, name, module=None, parent=None):
         if parent:
@@ -112,6 +109,7 @@ class MenuManager(GenericManager):
         for llave in nodes_module:
             order_menus = sorted(nodes_module[llave], key=lambda x: x.order)
             tree_menu = self.build_tree_menu2(order_menus, None, 0)
+            tree_menu = self.build_tree_menu2(order_menus, None, 0)
             lista_menus.append(TreeModule(module=llave, menus=tree_menu))
 
         return lista_menus
@@ -140,7 +138,8 @@ class TreeModule:
 class Menu(models.Model):
     name = CharFieldTrim(
         max_length=15, error_messages=ErrorMessage.UNIQUE_ERROR, blank=False)
-    module = models.ForeignKey(Module, on_delete=models.PROTECT)
+    module = models.ForeignKey(
+        Module, on_delete=models.PROTECT, related_name='modules')
     parent = models.ForeignKey(
         'self', null=True, default=None, blank=True, on_delete=models.PROTECT)
     order = models.PositiveSmallIntegerField(default=0)

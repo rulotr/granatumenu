@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import render
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers, status
 from rest_framework.generics import GenericAPIView
 from rest_framework.mixins import (
@@ -47,12 +48,14 @@ class ListModelMixinCustom:
             return self.get_paginated_response(serializer.data)
 
         result_list = self.perform_list(queryset)
+
         serializer = self.get_serializer(result_list, many=True)
 
         return Response(serializer.data)
 
     def perform_list(self, queryset):
         return queryset
+
 
 # Arreglar este para que sea generico
 
@@ -78,6 +81,14 @@ class CreateModelMixinCustom(CreateModelMixin):
             **serializer.validated_data)
         serializer = self.get_serializer(new_module)
         return serializer
+
+    # def get_serializer_class(self):
+    #     import ipdb
+    #     ipdb.set_trace()
+    #     serializer = self.dict_serializer_classes.get(
+    #         self.request.method, self.serializer_class)
+
+    #     return serializer
 
 
 class UpdateModelMixinCustom(UpdateModelMixin):
@@ -163,19 +174,23 @@ class ModuleDetailApi(RetrieveModelMixin, UpdateModelMixinCustom, DestroyModelMi
 
 class MenuListApi(CreateModelMixinCustom, ListModelMixinCustom, GenericAPIView):
     queryset = Menu.objects.all()
-    serializer_class = MenuSerializer
+    #serializer_class = MenuSerializer
     model_operations = Menu
 
-    serializer_classes = {
-        'GET': MenuTreeSerializer
+    dict_serializer_classes = {
+        'GET': MenuTreeSerializer,
+        'POST': MenuSerializer
     }
-    model_operations = Menu
+    #filter_backends = [DjangoFilterBackend]
+    #filterset_fields = ['module__id']
 
     def get_serializer_class(self):
-        return self.serializer_classes.get(self.request.method, self.serializer_class)
+        serializer = self.dict_serializer_classes.get(
+            self.request.method, self.serializer_class)
+        return serializer
 
     def perform_list(self, queryset):
-        return Menu.objects.execute_list(queryset)
+        return Menu.objects.get_tree_complete(queryset)
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
