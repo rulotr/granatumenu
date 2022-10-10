@@ -299,63 +299,6 @@ class TestMenuQueries(TestCase):
         with self.assertRaisesMessage(Menu.DoesNotExist, "The menu with the pk = 1 doesnt exist"):
             Menu.objects.find_by_pk(pk=1)
 
-    def test_get_tree_menu_for_module_one_level(self):
-        module1 = ModuleFactory()
-        module2 = ModuleFactory()
-        MenuFactory.reset_sequence(0)
-        MenuFactory.create_batch(5, module=module1, parent=None)
-        MenuFactory.create_batch(2, module=module2, parent=None)
-
-        tree_menu = Menu.objects.get_tree_by_module(module=module1.pk)
-        tree1, tree2, tree3, tree4, tree5 = tree_menu
-
-        module_id = module1.pk
-        self.assertEqual(len(tree_menu), 5)
-        self.assertEqual(tree1, TreeMenu(
-            pk=1, module=module_id, name='Menu 1', order=1, parent=None, sub_menu=[]))
-        self.assertEqual(tree2, TreeMenu(
-            pk=2, module=module_id, name='Menu 2', order=2, parent=None, sub_menu=[]))
-        self.assertEqual(tree3, TreeMenu(
-            pk=3, module=module_id, name='Menu 3', order=3, parent=None, sub_menu=[]))
-        self.assertEqual(tree4, TreeMenu(
-            pk=4, module=module_id, name='Menu 4', order=4, parent=None, sub_menu=[]))
-        self.assertEqual(tree5, TreeMenu(
-            pk=5, module=module_id, name='Menu 5', order=5, parent=None, sub_menu=[]))
-
-    def test_get_tree_menu_for_module_with_submenu(self):
-        module1 = ModuleFactory()
-        MenuFactory.reset_sequence(0)
-        menu1 = MenuFactory(module=module1, order=2)
-        menu2 = MenuFactory(module=module1, order=1)
-
-        menu1_1 = MenuFactory(parent=menu1, order=1)
-        menu1_2 = MenuFactory(parent=menu1, order=2)
-        menu2_1 = MenuFactory(parent=menu2, order=1)
-
-        menu1_1_1 = MenuFactory(parent=menu1_1, order=1)
-        tree_menu = Menu.objects.get_tree_by_module(module=module1.pk)
-
-        tree1, tree2 = tree_menu
-        tree1_1 = tree1.sub_menu[0]
-
-        tree2_1, tree2_2 = tree2.sub_menu
-        tree2_1_1 = tree2_1.sub_menu[0]
-
-        self.assertEqual(len(tree_menu), 2)
-        self.assertEqual(len(tree1.sub_menu), 1)
-        self.assertEqual(len(tree1_1.sub_menu), 0)
-        self.assertEqual(len(tree2.sub_menu), 2)
-        self.assertEqual(len(tree2_1.sub_menu), 1)
-        self.assertEqual(len(tree2_1_1.sub_menu), 0)
-        self.assertEqual(len(tree2_2.sub_menu), 0)
-
-        self.assertEqual(tree1.path(), menu2.name)
-        self.assertEqual(tree1_1.path(), f'|---{menu2_1.name}')
-        self.assertEqual(tree2.path(), menu1.name)
-        self.assertEqual(tree2_1.path(), f'|---{menu1_1.name}')
-        self.assertEqual(tree2_1_1.path(), f'|---|---{menu1_1_1.name}')
-        self.assertEqual(tree2_2.path(), f'|---{menu1_2.name}')
-
     def test_get_tree_menu_all_modules_one_level(self):
         module1 = ModuleFactory()
         module2 = ModuleFactory()
