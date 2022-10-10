@@ -406,6 +406,8 @@ class TestMenuQueries(TestCase):
         menu1_1_1 = MenuFactory(parent=menu1_1, order=1)
 
         queryset = Menu.objects.all()
+        self.assertNumQueries(40)
+
         tree_menu = Menu.objects.get_tree_complete(queryset)
         module1_menu, module2_menu = tree_menu
 

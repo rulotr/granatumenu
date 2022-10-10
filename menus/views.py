@@ -164,15 +164,15 @@ class ModuleDetailApi(RetrieveModelMixin, UpdateModelMixinCustom, DestroyModelMi
 
 
 class MenuListApi(CreateModelMixinCustom, ListModelMixinCustom, GenericAPIView):
-    queryset = Menu.objects.all()
+    queryset = Menu.objects.all().select_related('module')
     model_operations = Menu
 
     dict_serializer_classes = {
         'GET': MenuTreeSerializer,
         'POST': MenuSerializer
     }
-    #filter_backends = [DjangoFilterBackend]
-    #filterset_fields = ['module__id']
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['module__id']
 
     def get_serializer_class(self):
         serializer = self.dict_serializer_classes.get(

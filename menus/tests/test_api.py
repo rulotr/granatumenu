@@ -275,6 +275,29 @@ class ParametroMenuAPITest(APITestCase):
         self.assertEqual(len(json_tree_menu), 2)
         self.assertEqual(json_tree_menu, result_exp)
 
+    def test_list_filter_by_module(self):
+        module1 = ModuleFactory()
+        module2 = ModuleFactory()
+
+        MenuFactory.reset_sequence(0)
+        menu1 = MenuFactory(module=module1, order=2)
+        menu2 = MenuFactory(module=module1, order=1)
+
+        menu1_1 = MenuFactory(parent=menu1, order=1)
+        menu1_2 = MenuFactory(parent=menu1, order=2)
+        menu2_1 = MenuFactory(parent=menu2, order=1)
+
+        m2_menu1 = MenuFactory(module=module2, order=1)
+
+        menu1_1_1 = MenuFactory(parent=menu1_1, order=1)
+
+        url_filter = f"{self.base_url_list}?module__id={module1.pk}"
+
+        with self.assertNumQueries(1):
+            resp_tree_menu = self.client.get(url_filter, format='json')
+            self.assertEqual(resp_tree_menu.status_code, 200)
+            self.assertEqual(len(resp_tree_menu.data), 1)
+
     def test_post_menu(self):
         ModuleFactory()
 
