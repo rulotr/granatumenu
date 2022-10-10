@@ -293,7 +293,7 @@ class ParametroMenuAPITest(APITestCase):
 
         url_filter = f"{self.base_url_list}?module__id={module1.pk}"
 
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(3):
             resp_tree_menu = self.client.get(url_filter, format='json')
             self.assertEqual(resp_tree_menu.status_code, 200)
             self.assertEqual(len(resp_tree_menu.data), 1)
