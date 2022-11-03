@@ -64,20 +64,24 @@ class MenuManager(GenericManager):
         self.filter(pk=menu.id).update(order=new_order)
 
     def build_tree_menu(self, nodes_menu, id_parent, deep):
-
-        tree_menu = [TreeMenu(module=node.module.id,
-                              pk=node.id,
-                              name=node.name,
-                              order=node.order,
-                              parent=node.parent_id,
-                              deep=deep,
-                              sub_menu=self.build_tree_menu(nodes_menu, node.id, deep+1))
-                     for node in nodes_menu if node.parent_id == id_parent]
-
+        # Ordeno por menu
+        # Odeno por orden
+        tree_menu = []
+        for node in reversed(nodes_menu):
+            if node.parent_id == id_parent:
+                tree_menu.append(TreeMenu(module=node.module.id,
+                                          pk=node.id,
+                                          name=node.name,
+                                          order=node.order,
+                                          parent=node.parent_id,
+                                          deep=deep,
+                                          sub_menu=self.build_tree_menu(nodes_menu, node.id, deep+1))
+                                 )
+                # nodes_menu.remove(node)
         return tree_menu
 
-    def get_tree_complete(self, queryset):
-        nodes_menu = queryset
+    def get_tree_complete_nuevo(self, queryset):
+        nodes_menu = queryset  # .order_by('module', '-order')
         nodes_module = {}
 
         for node in nodes_menu:
@@ -86,9 +90,30 @@ class MenuManager(GenericManager):
 
         lista_menus = []
         for llave in nodes_module:
-            order_menus = sorted(nodes_module[llave], key=lambda x: x.order)
+            order_menus = sorted(
+                nodes_module[llave], key=lambda x: x.order, reverse=True)
             tree_menu = self.build_tree_menu(order_menus, None, 0)
             lista_menus.append(TreeModule(module=llave, menus=tree_menu))
+
+        return lista_menus
+
+    def get_tree_complete(self, queryset):
+        nodes_menu = queryset.order_by('-module', '-order')
+        lista_menus = []
+
+        nodes = list(nodes_menu)
+
+        tree_menu_temp = self.build_tree_menu(
+            nodes, None, 0)
+
+        for node in tree_menu_temp:
+            num_items = len(lista_menus)
+
+            if(num_items == 0 or lista_menus[num_items-1].module != node.module):
+                lista_menus.append(TreeModule(
+                    module=node.module, menus=[node]))
+            else:
+                lista_menus[num_items-1].menus.append(node)
 
         return lista_menus
 
