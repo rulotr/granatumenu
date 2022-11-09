@@ -309,10 +309,6 @@ class TestMenuQueries(TestCase):
         queryset = Menu.objects.all()
 
         tree_menu = Menu.objects.get_tree_complete(queryset)
-        import time
-        start_time = time.time()
-        print("--- %s seconds ---" % (time.time() - start_time))
-        # .--- 0.016002893447875977 seconds ---
         module1_menu, module2_menu = tree_menu
 
         self.assertEqual(len(tree_menu), 2)
@@ -351,12 +347,11 @@ class TestMenuQueries(TestCase):
         m2_menu1 = MenuFactory(module=module2, order=1)
 
         menu1_1_1 = MenuFactory(parent=menu1_1, order=1)
-
+        # self.assertNumQueries(40)
         queryset = Menu.objects.all()
-        self.assertNumQueries(40)
-        #import ipdb
-        # ipdb.set_trace()
-        tree_menu = Menu.objects.get_tree_complete(queryset)
+        tree_menu = []
+        with self.assertNumQueries(1):
+            tree_menu = Menu.objects.get_tree_complete(queryset)
         module1_menu, module2_menu = tree_menu
 
         tree1, tree2 = module1_menu.menus
