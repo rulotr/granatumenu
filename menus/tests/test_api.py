@@ -23,7 +23,7 @@ from menus.serializers import MenuSerializer
 from menus.tests.factories import MenuFactory, ModuleFactory
 
 URL_MODULES = '/api/modules/'
-URL_MENU = '/api/menu/'
+URL_MENU = '/api/menus/'
 URL_MODULES_LIST_NAME = 'menus:module-list'
 URL_MODULES_DETAIL_NAME = 'menus:module-detail'
 URL_MENU_LIST_NAME = 'menus:menu-list'

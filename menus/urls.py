@@ -1,11 +1,14 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from .views import MenuDetailApi, MenuListApi, ModuleDetailApi, ModuleListApi
+from .views import MenuViewSetApi, ModuleViewSetApi
 
 app_name = "users"
+
+router = DefaultRouter()
+router.register("modules", ModuleViewSetApi, basename="module")
+router.register("menus", MenuViewSetApi, basename="menu")
+
 urlpatterns = [
-    path("modules/", ModuleListApi.as_view(), name='module-list'),
-    path("modules/<int:pk>/", ModuleDetailApi.as_view(), name='module-detail'),
-    path("menu/", MenuListApi.as_view(), name='menu-list'),
-    path("menu/<int:pk>/", MenuDetailApi.as_view(), name='menu-detail'),
+    path('', include(router.urls))
 ]
